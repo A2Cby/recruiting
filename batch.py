@@ -15,23 +15,6 @@ import json
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 client = openai.Client()
-class EvalFeature(BaseModel):
-    feature: str
-    score: int
-    explanation: str
-
-class OverallSummary(BaseModel):
-    score: int
-    summary: str
-
-
-class EvaluationResult(BaseModel):
-    experience: EvalFeature
-    skills: EvalFeature
-    domain: EvalFeature
-    location: EvalFeature
-    overall_summary: OverallSummary
-
 
 
 
@@ -49,7 +32,6 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
-                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -60,7 +42,6 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
-                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -71,7 +52,6 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
-                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -82,7 +62,6 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
-                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -128,13 +107,42 @@ def create_batch_file(candidates, vacancy):
                     "You are a candidate evaluation assistant. Your task is to evaluate a candidate for the job described below. "
                     "When assessing the candidate, please consider the following guidelines for weighting different features: \n\n"
                     "- **Experience:** If the candidate has more years of experience than required, this is generally positive. "
-                    "Do not penalize overqualification in terms of experience.\n\n"
-                    "- **Location:** A candidate being in a non-preferred or wrong location should significantly decrease their suitability score.\n\n"
-                    "- **Skills and Domain Expertise:** Ensure the candidate meets the mandatory skills requirements (for example, advanced Spanish, or domain-specific experience in iGaming and Gambling). "
+                    "Penalize overqualification in terms of experience.\n\n"
+                    "**Location:** A candidate being in a non-preferred or wrong location should significantly decrease their suitability score.\n\n"
+                    "**Skills:** Ensure the candidate meets the mandatory skills requirements (for example, advanced Spanish). "
+                    "**Domain Expertise:** domain-specific experience in iGaming and Gambling" 
                     "Missing these critical features should have a strong negative impact on the evaluation.\n\n"
                     "Return your output strictly as a JSON object conforming to the following schema: {evaluation_result schema}.\n\n"
                     "Job Specification:\n"
                     f"{vacancy}"
+                    
+                    "\n\n"
+                    """Consider following rules for scoring:
+    Skills 
+	•	 iGaming, Gambling
+
+	•	* If + then 10
+	* if - then -10
+	•	
+	•	Language
+	•	* If Advanced / C1  «Spanish»  then 10 
+	* If B2 / Upper-Intermediate then 5
+	* If lower B1 Intermediate A2 Pre-Intermediate then 0
+	* If none then -10
+	•	
+	•	* If Native «Russian»  then 10
+	•	* If none then -10
+	•	
+	•	
+	•	Region
+	•	
+	•	* If Latam then 10
+	•	* If none then -10
+	•	
+	•	Location 
+	•	* If  Cyprus, Latvia, Georgia, Malta, Poland, Serbia, Mexico, Spain, Estonia, Russia, Bulgaria, Lithuania, Kazakhstan, Portugal, Thailand, Brazil, Argentina, Chile, Turkey  then 10
+	* If none then -10
+"""
                 )
             },
             {
