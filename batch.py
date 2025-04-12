@@ -15,6 +15,23 @@ import json
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 client = openai.Client()
+class EvalFeature(BaseModel):
+    feature: str
+    score: int
+    explanation: str
+
+class OverallSummary(BaseModel):
+    score: int
+    summary: str
+
+
+class EvaluationResult(BaseModel):
+    experience: EvalFeature
+    skills: EvalFeature
+    domain: EvalFeature
+    location: EvalFeature
+    overall_summary: OverallSummary
+
 
 
 
@@ -32,6 +49,7 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
+                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -42,6 +60,7 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
+                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -52,6 +71,7 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
+                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -62,6 +82,7 @@ response_format = {
                     "type": "object",
                     "title": "EvalFeature",
                     "properties": {
+                        "feature": { "type": "string", "title": "Feature" },
                         "score": { "type": "integer", "title": "Score" },
                         "explanation": { "type": "string", "title": "Explanation" }
                     },
@@ -87,7 +108,6 @@ response_format = {
                 "overall_summary"
             ],
             "additionalProperties": False}}}
-
 def create_batch_file(candidates, vacancy):
     tasks = []
     for candidate in candidates:
@@ -100,65 +120,45 @@ def create_batch_file(candidates, vacancy):
             "url": "/v1/chat/completions",
             "body": {
                 "model": "gpt-4o-mini",
-                "messages" : [
-            {
-                "role": "system",
-                "content": (
-                    "You are a candidate evaluation assistant. Your task is to evaluate a candidate for the job described below. "
-                    "When assessing the candidate, please consider the following guidelines for weighting different features: \n\n"
-                    "- **Experience:** If the candidate has more years of experience than required, this is generally positive. "
-                    "Penalize overqualification in terms of experience.\n\n"
-                    "**Location:** A candidate being in a non-preferred or wrong location should significantly decrease their suitability score.\n\n"
-                    "**Skills:** Ensure the candidate meets the mandatory skills requirements (for example, advanced Spanish). "
-                    "**Domain Expertise:** domain-specific experience in iGaming and Gambling" 
-                    "Missing these critical features should have a strong negative impact on the evaluation.\n\n"
-                    "Return your output strictly as a JSON object conforming to the following schema: {evaluation_result schema}.\n\n"
-                    "Job Specification:\n"
-                    f"{vacancy}"
-                    
-                    "\n\n"
-                    """Consider following rules for scoring:
-    Skills 
-	•	 iGaming, Gambling
-
-	•	* If + then 10
-	* if - then -10
-	•	
-	•	Language
-	•	* If Advanced / C1  «Spanish»  then 10 
-	* If B2 / Upper-Intermediate then 5
-	* If lower B1 Intermediate A2 Pre-Intermediate then 0
-	* If none then -10
-	•	
-	•	* If Native «Russian»  then 10
-	•	* If none then -10
-	•	
-	•	
-	•	Region
-	•	
-	•	* If Latam then 10
-	•	* If none then -10
-	•	
-	•	Location 
-	•	* If  Cyprus, Latvia, Georgia, Malta, Poland, Serbia, Mexico, Spain, Estonia, Russia, Bulgaria, Lithuania, Kazakhstan, Portugal, Thailand, Brazil, Argentina, Chile, Turkey  then 10
-	* If none then -10
-"""
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Candidate description:\n{description}\n\n"
-                    "Please evaluate the candidate according to the job requirements. Adjust the influence of each feature based on its relative importance (for example, a wrong location is a significant negative factor, but having more experience than required is generally a positive factor), "
-                    "and output your response in the strict JSON format as specified."
-                )
-            }
-        ]
-        ,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a candidate evaluation assistant. Your task is to evaluate a candidate for the job described below. "
+                            "When assessing the candidate, please consider the following guidelines for weighting different features:\n\n"
+                            "- **Experience:** If the candidate has more years of experience than required, this is generally positive. Penalize overqualification in terms of experience.\n\n"
+                            "- **Location:** A candidate being in a non-preferred or wrong location should significantly decrease their suitability score.\n\n"
+                            "- **Skills:** Ensure the candidate meets the mandatory skills requirements (for example, advanced Spanish). "
+                            "Also, consider **Domain Expertise** in iGaming and Gambling. Missing these critical features should strongly impact the evaluation.\n\n"
+                            "Return your output strictly as a JSON object conforming to the following schema: {evaluation_result schema}.\n\n"
+                            "Job Specification:\n"
+                            f"{vacancy}\n\n"
+                            "Consider the following rules for scoring:\n"
+                            "Skills:\n"
+                            "  - iGaming, Gambling:\n"
+                            "      * If there is iGaming, Gambling experience then +10\n"
+                            "      * If not then -10\n\n"
+                            "Note: Location may be indicated in different languages. For example, 'Turkey' in English, in Turkish 'Türkiye', in Russian 'Турция'"
+                            "Try to follow the general rules of scoring:\n"
+                            "Any score is only positive, or zero, with negative values assigned only if we have instruction in the vacancy description to remove the candidates with some parameter. EG if in vacancy it is indicated to ignore specific location or people with specific working experience \n"
+                            "   0: Not applicable or non relevant\n"
+                            "  10: Very poor value that makes a perfect fit\n"
+                            "  5: okish value that doesnt exclude candidate, but we dont really interested in him immediately\n"
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Candidate description:\n{description}\n\n"
+                            "Please evaluate the candidate according to the job requirements. Adjust the influence of each feature based on its relative importance (for example, a wrong location is a significant negative factor, but having more experience than required is generally a positive factor), "
+                            "and output your response in the strict JSON format as specified."
+                        )
+                    }
+                ],
                 "response_format": response_format
-
             }
         }
+
 
         tasks.append(task)
 
