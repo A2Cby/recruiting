@@ -31,52 +31,54 @@ def get_db_connection():
 def fetch_candidates_from_db(keywords: Optional[List[str]] = None) -> List[CandidateData]:
     """Fetches and formats candidate data, optionally filtering by keywords in skills or summary."""
     base_query = """
-    WITH edu AS (
-        SELECT
-            username,
-            COALESCE(
-                string_agg(
-                    format(
-                        'edu: id=%s, start_date=%s, end_date=%s, fieldOfStudy=%s, degree=%s, grade=%s, schoolName=%s, description=%s, activities=%s, schoolId=%s',
-                        id, start_date, end_date, "fieldOfStudy", degree, grade, "schoolName", description, activities, "schoolId"
-                    ),
-                    ' | '
-                ),
-                ''
-            ) AS edu_text
-        FROM education_data
-        GROUP BY username
-    ),
-    pos AS (
-        SELECT
-            username,
-            COALESCE(
-                string_agg(
-                    format(
-                        'pos: id=%s, companyId=%s, companyName=%s, companyUsername=%s, companyIndustry=%s, companyStaffCountRange=%s, title=%s, location=%s, description=%s, employmentType=%s, start_date=%s, end_date=%s',
-                        id, "companyId", "companyName", "companyUsername", "companyIndustry", "companyStaffCountRange", title, location, description, "employmentType", start_date, end_date
-                    ),
-                    ' | '
-                ),
-                ''
-            ) AS pos_text
-        FROM position_data
-        GROUP BY username
-    )
+WITH edu AS (
     SELECT
-        p.id,
-        p."fullName",
-        p.summary,
-        p.skills,
-        p.location,
-        p.country,
-        p.city,
-        p."profileURL",
-        concat_ws(' | ', edu_text, pos_text) AS combined_text
-    FROM person_data p
-    LEFT JOIN edu ON p.username = edu.username
-    LEFT JOIN pos ON p.username = pos.username
-    """
+        username,
+        COALESCE(
+            string_agg(
+                format(
+                    'edu: id=%%s, start_date=%%s, end_date=%%s, fieldOfStudy=%%s, degree=%%s, grade=%%s, schoolName=%%s, description=%%s, activities=%%s, schoolId=%%s',
+                    id, start_date, end_date, "fieldOfStudy", degree, grade, "schoolName", description, activities, "schoolId"
+                ),
+                ' | '
+            ),
+            ''
+        ) AS edu_text
+    FROM education_data
+    GROUP BY username
+),
+pos AS (
+    SELECT
+        username,
+        COALESCE(
+            string_agg(
+                format(
+                    'pos: id=%%s, companyId=%%s, companyName=%%s, companyUsername=%%s, companyIndustry=%%s, companyStaffCountRange=%%s, title=%%s, location=%%s, description=%%s, employmentType=%%s, start_date=%%s, end_date=%%s',
+                    id, "companyId", "companyName", "companyUsername", "companyIndustry", "companyStaffCountRange",
+                    title, location, description, "employmentType", start_date, end_date
+                ),
+                ' | '
+            ),
+            ''
+        ) AS pos_text
+    FROM position_data
+    GROUP BY username
+)
+SELECT
+    p.id,
+    p."fullName",
+    p.summary,
+    p.skills,
+    p.location,
+    p.country,
+    p.city,
+    p."profileURL",
+    concat_ws(' | ', edu_text, pos_text) AS combined_text
+FROM person_data p
+LEFT JOIN edu ON p.username = edu.username
+LEFT JOIN pos ON p.username = pos.username
+"""
+
 
     # Dynamically build WHERE clause for keywords
     where_clauses = []

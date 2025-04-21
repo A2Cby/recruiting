@@ -6,9 +6,30 @@ from typing import List, Dict
 
 from schemas.candidate import CandidateScore
 from core.config import settings
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+import requests
+def send_candidates_to_api(final_output):
+    res_auth = requests.post(
+        'https://gate.hrbase.info/auth/login',
+        data={"email": os.getenv("email"), "password": os.getenv("password")},
+    )
+    tkn = res_auth.content[16:-2].decode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {tkn}"  # or whatever auth is needed
+    }
 
+    try:
+        response = requests.post("https://gate.hrbase.info/api/imported-candidates", headers=headers, json=final_output)
+        response.raise_for_status()
+        logger.info("Successfully sent candidates to HRBase API.")
+        return response.json()
+    except requests.RequestException as e:
+        logger.error(f"Failed to send candidates to HRBase API: {e}")
+        return None
 def save_results_to_file(scores: List[CandidateScore], filename_prefix="candidate_scores") -> str | None:
     """Formats results (already containing details) to the target structure, sorts, and saves to a local JSON file."""
     output_dir = settings.output_dir
@@ -69,7 +90,14 @@ def save_results_to_file(scores: List[CandidateScore], filename_prefix="candidat
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(final_output, f, indent=2, ensure_ascii=False)
         logger.info(f"Formatted results saved to {filepath}")
+        # send to the clients API
+        send_candidates_to_api(final_output)
+        logger.info(f"Formatted results sent to HRBase API.")
         return filepath
     except IOError as e:
         logger.error(f"Failed to save formatted results to file {filepath}: {e}")
-        return None 
+        return None
+
+
+
+

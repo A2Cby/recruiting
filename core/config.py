@@ -1,5 +1,7 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,7 @@ class Settings(BaseSettings):
     db_user: str = "postgres"
     db_password: str = "postgres"
     db_host: str = "127.0.0.1"
-    db_port: str = "6543"
+    db_port: str = "5466"
 
     # Output Directory
     output_dir: str = "data/"

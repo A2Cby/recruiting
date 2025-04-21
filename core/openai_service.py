@@ -33,7 +33,7 @@ def extract_keywords_from_vacancy(vacancy_text: str) -> List[str]:
     Extracts keywords from a vacancy description using OpenAI's structured output feature.
     """
     try:
-        response = client.beta.chat.completions.parse(
+        response = sync_client.beta.chat.completions.parse(
             model=MODEL_NANO,
             messages=[
                 {"role": "system", "content": "You are an expert keyword extractor for recruitment."},
