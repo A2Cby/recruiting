@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic[email]
+pydantic-settings
+python-dotenv
+psycopg2-binary
+pandas
+openai
+httpx
+asyncio 

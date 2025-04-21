@@ -1,39 +1,53 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Dict
-from batch import create_batch, create_batch_file, retrieve_batch, download_results, parse_batch_results
+import logging
+from fastapi import FastAPI
+from dotenv import load_dotenv
 
-app = FastAPI()
+# Load .env file before other imports (especially config)
+load_dotenv()
 
-class Candidate(BaseModel):
-    id: int
-    text: str
+from api.v1.api import api_router
+from core.config import settings # Import settings to ensure config is loaded
 
-class MatchRequest(BaseModel):
-    vacancy_text: str
-    candidates: List[Candidate]
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class BatchResponse(BaseModel):
-    batch_id: str
+app = FastAPI(
+    title="Recruiting Candidate Matcher API",
+    description="API to match candidates against a vacancy using OpenAI Batch API.",
+    version="1.0.0"
+)
 
-@app.post("/match_candidates")
-def match_candidates(request: MatchRequest):
-    try:
-        batch_file = create_batch_file(
-            candidates=[{"id": c.id, "description": c.text} for c in request.candidates],
-            vacancy=request.vacancy_text
-        )
-        batch_job_id = create_batch(batch_file)
-        import requests
-        batch_job = retrieve_batch(batch_job_id)
-        downloaded_results = download_results(batch_job.output_file_id)
-        df_results = parse_batch_results(downloaded_results)
-        return df_results
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting Candidate Matcher API...")
+    logger.info(f"OpenAI Key Loaded: {'Yes' if settings.openai_api_key else 'No'}")
+    logger.info(f"Output Directory: {settings.output_dir}")
+    # Add any other startup logic here, like checking DB connection if needed
+    # from core.db import get_db_connection
+    # conn = get_db_connection()
+    # if conn:
+    #     logger.info("Database connection verified.")
+    #     conn.close()
+    # else:
+    #     logger.error("Database connection failed on startup.")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down Candidate Matcher API...")
 
 
-@app.post("/retrieve_batch_results")
-def retrieve_batch_results(request:BatchResponse):
-    csv_content = retrieve_batch(request.batch_id)
-    return csv_content
+# Include the v1 API router
+# All routes defined in api/v1/api.py will be available under /api/v1
+app.include_router(api_router, prefix="/api/v1")
+
+# Add a basic root endpoint for health check / info
+@app.get("/")
+async def root():
+    return {"message": "Recruiting Candidate Matcher API is running. Visit /docs for API documentation."}
+
+# If running directly using `python main.py` (not recommended for production)
+# Use uvicorn command instead: `uvicorn main:app --reload`
+# import uvicorn
+# if __name__ == "__main__":
+#    uvicorn.run(app, host="0.0.0.0", port=8000)
