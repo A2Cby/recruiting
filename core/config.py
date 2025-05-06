@@ -1,23 +1,25 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
+import os
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # OpenAI API Key
-    openai_api_key: str = ""
+    openai_api_key: str = os.environ.get("OPENAI_API_KEY", "")
 
     # Database Configuration
-    db_name: str = "recruiting"
-    db_user: str = "postgres"
-    db_password: str = "postgres"
-    db_host: str = "127.0.0.1"
-    db_port: str = "5466"
+    db_name: str = os.environ.get("DB_NAME", "recruiting")
+    db_user: str = os.environ.get("DB_USER", "postgres")
+    db_password: str = os.environ.get("DB_PASSWORD", "postgres")
+    db_host: str = os.environ.get("DB_HOST", "127.0.0.1")
+    db_port: str = os.environ.get("DB_PORT", "5466")
 
     # Output Directory
-    output_dir: str = "data/"
+    output_dir: str = os.environ.get("OUTPUT_DIR", "data/")
 
     # Model configuration for Settings loading
     model_config = SettingsConfigDict(

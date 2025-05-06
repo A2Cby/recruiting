@@ -21,10 +21,11 @@ The system uses a PostgreSQL database with three main tables:
 ## Docker Setup
 docker build -t recruiting-api:latest .
 docker save recruiting-api:latest -o recruiting-api.tar
-scp recruiting-api.tar g.burdin@93.127.132.57:~/recruiting
+scp recruiting-api.tar username@93.127.132.57:~/recruiting
 
 On the server:
 docker load -i recruiting-api.tar
+setup .env file
 docker run -d --env-file .env -p 8910:8910 --restart unless-stopped --name recruiting-api --network recruiting-net recruiting-api
 
 
