@@ -103,7 +103,7 @@ LEFT JOIN pos ON p.username = pos.username
     final_query = base_query
     if where_clauses:
         final_query += " WHERE " + " AND ".join(where_clauses) # Use AND if combining with other future clauses
-    final_query += ";"
+    final_query += " LIMIT 1000;"
 
     conn = get_db_connection()
     if not conn:
