@@ -54,6 +54,7 @@ async def match_candidates_batch_endpoint(
 
         # 5. Create Batch Job
         metadata = {
+            "vacancy_id": request.vacancy_id,
             "vacancy_description_preview": request.vacancy_text[:100] + "...",
             "num_candidates_submitted": str(len(candidates)),
             "keywords_used_for_filter": ",".join(keywords) if keywords else "None"
@@ -63,7 +64,7 @@ async def match_candidates_batch_endpoint(
             raise HTTPException(status_code=500, detail="Failed to create OpenAI batch job.")
 
         # 6. Add background task to monitor and process the job
-        background_tasks.add_task(openai_service.monitor_and_process_batch_job, batch_job_id, candidates)
+        background_tasks.add_task(openai_service.monitor_and_process_batch_job, batch_job_id, candidates, request.vacancy_id)
         logger.info(f"Background task added for monitoring batch job {batch_job_id}")
 
         # 7. Return initial status

@@ -31,7 +31,9 @@ def send_candidates_to_api(final_output):
     except requests.RequestException as e:
         logger.error(f"Failed to send candidates to HRBase API: {e}")
         return None
-def save_results_to_file(scores: List[CandidateScore], filename_prefix="candidate_scores") -> str | None:
+def save_results_to_file(scores: List[CandidateScore],
+                         vacancy_id: str | int | None = None,
+                         filename_prefix="candidate_scores") -> str | None:
     """Formats results (already containing details) to the target structure, sorts, and saves to a local JSON file."""
     output_dir = settings.output_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -53,20 +55,12 @@ def save_results_to_file(scores: List[CandidateScore], filename_prefix="candidat
         # Get details directly from the score_item
         profile_url = score_item.profileURL or "" # Use empty string if None
         full_name = score_item.fullName or "N/A" # Use N/A if None
-
-        # Determine sourceType (basic example)
-        # Default to 'linkedin' unless profile_url is non-empty and not a linkedin URL
-        if profile_url and "linkedin.com" not in profile_url:
-            source_type = "db_source" # Or potentially derive from URL if possible
-        else:
-            source_type = "linkedin" # Default if empty or contains linkedin.com
-
         output_candidate = {
             "name": full_name,
             "sourceId": str(score_item.candidate_id),
             "sourceUrl": profile_url,
-            "sourceType": source_type, # Placeholder, adjust as needed
-            "vacancyId": 0,          # Placeholder, adjust as needed
+            "sourceType": "linkedin",
+            "vacancyId": vacancy_id,
             "info": {
                 "score": score_item.score,
                 "reasoning": score_item.reasoning or ""

@@ -111,7 +111,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
         })
     return batch_input
 
-def process_openai_results(results_content: str, initial_candidates: List[CandidateData]) -> None:
+def process_openai_results(results_content: str, initial_candidates: List[CandidateData], vacancy_id) -> None:
     """Parses OpenAI results and combines with initial candidate data before saving."""
     final_scores: List[CandidateScore] = []
 
@@ -181,7 +181,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
     # Pass the fully populated scores to the saving function
     if final_scores:
         logger.info(f"Successfully processed {len(final_scores)} candidate scores with details. Proceeding to save.")
-        saved_filepath = save_results_to_file(final_scores)
+        saved_filepath = save_results_to_file(final_scores, vacancy_id=vacancy_id)
         if saved_filepath:
              logger.info(f"Final results saved to {saved_filepath}")
         else:
@@ -190,13 +190,9 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
         logger.warning("No scores were successfully processed from the OpenAI results.")
 
 
-async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[CandidateData]):
+async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[CandidateData], vacancy_id: str) -> None:
     """Monitors the OpenAI batch job and processes results upon completion, using initial candidate data."""
-    if not client:
-        logger.error("OpenAI client not initialized. Cannot process batch job.")
-        return
 
-    # Note: initial_candidates includes details like name and URL
     logger.info(f"Background task started: Monitoring batch job {batch_id} for {len(initial_candidates)} candidates.")
     start_time = time.time()
     timeout_seconds = 600 # 10 min timeout
@@ -219,7 +215,7 @@ async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[
                         results_content = results_content_bytes.decode('utf-8')
                         logger.info(f"Successfully downloaded results for batch {batch_id}. Processing...")
                         # Pass initial candidates data to the processing function
-                        process_openai_results(results_content, initial_candidates)
+                        process_openai_results(results_content, initial_candidates, vacancy_id)
                     except Exception as download_err:
                         logger.error(f"Failed to download or process results file {batch_job.output_file_id} for batch {batch_id}: {download_err}")
                 else:
