@@ -16,6 +16,7 @@ def send_candidates_to_api(final_output):
         'https://gate.hrbase.info/auth/login',
         data={"email": os.getenv("email"), "password": os.getenv("password")},
     )
+    logger.info("Successfully logged in to HRBase API.")
     tkn = res_auth.content[16:-2].decode("utf-8")
     headers = {
         "Content-Type": "application/json",
@@ -23,7 +24,7 @@ def send_candidates_to_api(final_output):
     }
 
     try:
-        response = requests.post("https://gate.hrbase.info/api/imported-candidates", headers=headers, json=final_output)
+        response = requests.post("https://gate.hrbase.info/api/imported-candidates/bulk-create", headers=headers, json=final_output)
         response.raise_for_status()
         logger.info("Successfully sent candidates to HRBase API.")
         return response.json()
