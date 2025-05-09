@@ -46,15 +46,7 @@ def extract_keywords_from_vacancy(vacancy_text: str) -> List[str]:
                 {vacancy_text}
                 ---
                 
-Pay special attention to:
 
-- **Residency clues**: check if their listed employers or schools match the location field.  
-- **Remote flexibility**: a different city for a remote role is fine—don’t penalize it.  
-- **Education details**: verify the names of universities or institutions;  
-- **Online courses**: include entries like Coursera/MITx but label them as “certificate/course.”  
-- **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
-- **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” without any proof as questionable.  
-- **Concurrent roles**: identify full-time overlaps longer than six months.  
 """}
             ],
             response_format=KeywordResponse
@@ -81,6 +73,17 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     ---
     {vacancy_text}
     ---
+    
+    Pay special attention to:
+
+- **Residency clues**: check if their listed employers or schools match the location field.  
+- **Remote flexibility**: a different city for a remote role is fine—don’t penalize it.  
+- **Education details**: verify the names of universities or institutions;  
+- **Online courses**: include entries like Coursera/MITx but label them as “certificate/course.”  
+- **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
+- **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” without any proof as questionable.  
+- **Concurrent roles**: identify full-time overlaps longer than six months.  
+- **Russian language**: add scores for Russian language skills (eg education or job in russian speaking countries) in the candidate's profile, we usually need it for our clients.
     """
     for candidate in candidates:
         user_content = f"""
