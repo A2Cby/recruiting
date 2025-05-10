@@ -54,7 +54,7 @@ async def match_candidates_batch_endpoint(
 
         # 5. Create Batch Job
         metadata = {
-            "vacancy_id": request.vacancy_id,
+            "vacancy_id": str(request.vacancy_id),
             "vacancy_description_preview": request.vacancy_text[:100] + "...",
             "num_candidates_submitted": str(len(candidates)),
             "keywords_used_for_filter": ",".join(keywords) if keywords else "None"

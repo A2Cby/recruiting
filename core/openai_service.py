@@ -190,7 +190,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
         logger.warning("No scores were successfully processed from the OpenAI results.")
 
 
-async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[CandidateData], vacancy_id: str) -> None:
+async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[CandidateData], vacancy_id: int) -> None:
     """Monitors the OpenAI batch job and processes results upon completion, using initial candidate data."""
 
     logger.info(f"Background task started: Monitoring batch job {batch_id} for {len(initial_candidates)} candidates.")
@@ -294,11 +294,6 @@ async def create_batch_job(input_file_id: str, metadata: Dict[str, str]) -> str 
         return batch_job.id
     except Exception as e:
         logger.error(f"Failed to create batch job: {e}")
-        # Consider cleaning up the uploaded file if job creation fails, though requires careful handling
-        # try:
-        #     await client.files.delete(input_file_id)
-        # except Exception as del_err:
-        #     logger.error(f"Failed to clean up uploaded file {input_file_id} after job creation failure: {del_err}")
         return None
 
 async def get_batch_status(batch_id: str):

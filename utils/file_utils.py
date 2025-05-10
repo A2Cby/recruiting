@@ -24,7 +24,7 @@ def send_candidates_to_api(final_output):
     }
 
     try:
-        response = requests.post("https://gate.hrbase.info/api/imported-candidates/bulk-create", headers=headers, json=final_output)
+        response = requests.post("https://gate.hrbase.info/imported-candidates/bulk-create", headers=headers, json=final_output)
         response.raise_for_status()
         logger.info("Successfully sent candidates to HRBase API.")
         return response.json()
@@ -60,7 +60,7 @@ def save_results_to_file(scores: List[CandidateScore],
             "sourceId": str(score_item.candidate_id),
             "sourceUrl": profile_url,
             "sourceType": "linkedin",
-            "vacancyId": vacancy_id,
+            "vacancyId": int(vacancy_id),
             "info": {
                 "score": score_item.score,
                 "reasoning": score_item.reasoning or ""
