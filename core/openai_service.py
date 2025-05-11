@@ -26,9 +26,9 @@ sync_client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key
 if not client or not sync_client:
     logger.warning("OpenAI client (async or sync) not initialized due to missing API key.")
 
-MODEL_NANO = "gpt-4.1-nano-2025-04-14" # Define model constant
+MODEL_NANO = "gpt-4.1"
 
-def extract_keywords_from_vacancy(vacancy_text: str) -> List[str]:
+def extract_keywords_from_vacancy(vacancy_text: str):
     """
     Extracts keywords from a vacancy description using OpenAI's structured output feature.
     """
@@ -36,27 +36,89 @@ def extract_keywords_from_vacancy(vacancy_text: str) -> List[str]:
         response = sync_client.beta.chat.completions.parse(
             model=MODEL_NANO,
             messages=[
-                {"role": "system", "content": "You are an expert keyword extractor for recruitment."},
+                {"role": "system", "content": "You are an expert keyword extractor for recruitment AI System. "},
                 {"role": "user", "content": f"""
-                Extract the most important technical skills, tools, concepts, and required domain keywords
-                from the following vacancy description. Focus on terms useful for searching a candidate database.
+Extract the most important keywords from the vacancy description to search for candidates in Linkedin.
+Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 10.
+The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
 
-                Vacancy Description:
-                ---
-                {vacancy_text}
-                ---
-                
+Also, provide a list of country codes for candidate search locations. These codes **must** be valid `LocationCode` enum values (e.g., UNITED_STATES, GERMANY, FRANCE are some examples of valid codes; refer to the `LocationCode` schema for all options). If the vacancy does not specify countries, return an empty list. Base your answer on the vacancy description.
 
-"""}
-            ],
-            response_format=KeywordResponse
+When you see a country name in the vacancy you MUST convert it to the exact enum in LocationCode:
+Poland -> POLAND, Germany -> GERMANY
+If the whole region instead of a country is mentioned, list all countries inside of the region. For example, EU -> [FRANCE, BELGIUM, SPAIN, ENGLAND, GERMANY, ITALY, NETHERLANDS, POLAND, SWITZERLAND, SWEDEN, AUSTRIA, BULGARIA, CROATIA, CZECH_REPUBLIC, DENMARK, ESTONIA, FINLAND, GREECE, HUNGARY, ROMANIA, PORTUGAL, NORWAY, LITHUANIA, LUXEMBOURG, SLOVAKIA] and so on.
+If no country is mentioned, return an empty list.
+                            Vacancy Description:
+                            ---
+                            {vacancy_text}
+                            ---
+            """}
+            ]
+            ,
+            response_format=KeywordResponse,
+            temperature=0.2
         )
         keywords = response.choices[0].message.parsed.keywords
-        logger.info(f"Extracted keywords: {keywords}")
-        return keywords
+        locations = response.choices[0].message.parsed.locations
+        logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
+        country_code_map = {
+            "FRANCE": "105015875",
+            "BELGIUM": "100565514",
+            "SPAIN": "105646813",
+            "ENGLAND": "102299470",
+            "GERMANY": "101282230",
+            "ITALY": "103350119",
+            "UNITED STATES": "103644278",
+            "CANADA": "101174742",
+            "AUSTRALIA": "101452733",
+            "INDIA": "102713980",
+            "CHINA": "102890883",
+            "JAPAN": "101355337",
+            "BRAZIL": "106057199",
+            "POLAND": "105072130",
+            "NETHERLANDS": "102890719",
+            "UKRAINE": "102264497",
+            "SWITZERLAND": "106693272",
+            "SWEDEN": "105117694",
+            "ALBANIA": "102845717",
+            "RUSSIA": "101728296",
+            "UNITED ARAB EMIRATES": "104305776",
+            "ANDORRA": "106296266",
+            "AUSTRIA": "103883259",
+            "BELARUS": "101705918",
+            "BULGARIA": "105333783",
+            "CROATIA": "104688944",
+            "CZECH REPUBLIC": "104508036",
+            "DENMARK": "104514075",
+            "ESTONIA": "102974008",
+            "FINLAND": "100456013",
+            "GEORGIA": "106315325",
+            "GREECE": "104677530",
+            "HUNGARY": "100288700",
+            "TURKEY": "106732692",
+            "ROMANIA": "106670623",
+            "PORTUGAL": "100364837",
+            "NORWAY": "103819153",
+            "MOLDOVA": "106178099",
+            "LITHUANIA": "101464403",
+            "LUXEMBOURG": "104042105",
+            "SERBIA": "101855366",
+            "SLOVAKIA": "103119917",
+            "BOSNIA AND HERZEGOVINA": "102869081",
+            "LATVIA": "104341318",
+            "LIECHTENSTEIN": "100878084",
+            "ISRAEL": "101620260",
+            "KAZAKHSTAN": "106049128",
+            "AZERBAIJAN": "103226548",
+            "UZBEKISTAN": "107734735",
+            "TAJIKISTAN": "105925962",
+        }
+
+        locations = [country_code_map.get(location, "") for location in locations]
+        return keywords, locations
     except Exception as e:
         logger.error(f"Error during keyword extraction: {e}")
-        return []
+        return [], [""]
 
 
 def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData]) -> List[Dict[str, Any]]:

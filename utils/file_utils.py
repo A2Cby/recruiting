@@ -94,5 +94,32 @@ def save_results_to_file(scores: List[CandidateScore],
         return None
 
 
+def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location: List[str]) -> List[Dict]:
+    """
+    Fetch candidates from LinkedIn using the provided keywords and location.
+    This is a placeholder function and should be replaced with actual LinkedIn API calls.
+    """
+    # Placeholder for LinkedIn API call
+    logger.info(f"Fetching candidates from LinkedIn with keywords: {keywords} and location: {location}")
+    url = f"http://93.127.132.57:8911/querystring"
+
+    headers = {"Content-Type": "application/json"}
+    location = ",".join(location) if location!=[] else ""
+    payload = [
+        {
+            "vacancy_id": vacancy_id,
+            "keywords": keywords,
+            "start": "0",
+            "geo": location
+        }
+    ]
+    logger.info("Payload for LinkedIn API: %s", payload)
+    params = {"querystring": json.dumps(payload)}
+    response = requests.post(url, headers=headers, params=params)
+    if response.status_code == 200:
+        logger.info("Successfully fetched candidates from LinkedIn.")
+    else:
+        logger.error(f"Failed to fetch candidates from LinkedIn: {response.status_code} - {response.text}")
+
 
 

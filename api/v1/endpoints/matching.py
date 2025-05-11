@@ -9,7 +9,7 @@ from schemas.candidate import CandidateData # Import CandidateData
 from core.db import fetch_candidates_from_db
 from core.openai_service import extract_keywords_from_vacancy
 from core import openai_service # Use the service module
-
+from utils.file_utils import fetch_candidates_from_linkedin
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -30,13 +30,16 @@ async def match_candidates_batch_endpoint(
     try:
         # 1. Extract Keywords (Sync call)
         logger.info("Extracting keywords from vacancy description...")
-        keywords = extract_keywords_from_vacancy(request.vacancy_text)
+        keywords, location = extract_keywords_from_vacancy(request.vacancy_text)
         if not keywords:
             logger.warning("No keywords extracted or keyword extraction failed. Proceeding without keyword filtering.")
-            # Decide: Proceed without filtering or raise error?
-            # Let's proceed without filtering for now.
 
-        # 2. Fetch Candidates (potentially filtered by keywords)
+        logger.info(f"Extracted keywords: {keywords}")
+        logger.info(f"Location: {location}")
+
+
+        # 3. Fetch Candidates
+        fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
         candidates: List[CandidateData] = fetch_candidates_from_db(keywords=keywords)
         if not candidates:
             logger.warning("No candidates found matching the criteria.")
