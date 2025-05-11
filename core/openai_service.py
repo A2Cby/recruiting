@@ -114,7 +114,7 @@ If no country is mentioned, return an empty list.
             "TAJIKISTAN": "105925962",
         }
 
-        locations = [country_code_map.get(location, "") for location in locations]
+        locations = str([country_code_map.get(location, "") for location in locations]).replace("'", "").replace("[", "").replace("]", "")
         return keywords, locations
     except Exception as e:
         logger.error(f"Error during keyword extraction: {e}")

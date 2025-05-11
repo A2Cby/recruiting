@@ -94,7 +94,7 @@ def save_results_to_file(scores: List[CandidateScore],
         return None
 
 
-def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location: List[str]) -> List[Dict]:
+def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location: List[str]):
     """
     Fetch candidates from LinkedIn using the provided keywords and location.
     This is a placeholder function and should be replaced with actual LinkedIn API calls.
@@ -104,7 +104,6 @@ def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location
     url = f"http://93.127.132.57:8911/querystring"
 
     headers = {"Content-Type": "application/json"}
-    location = ",".join(location) if location!=[] else ""
     payload = [
         {
             "vacancy_id": vacancy_id,
