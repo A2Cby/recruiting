@@ -15,7 +15,8 @@ from core.config import settings
 from schemas.candidate import CandidateData, CandidateScore
 from schemas.openai import KeywordResponse
 from utils.file_utils import save_results_to_file
-
+from dotenv import load_dotenv
+load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Initialize OpenAI clients
@@ -26,7 +27,6 @@ sync_client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key
 if not client or not sync_client:
     logger.warning("OpenAI client (async or sync) not initialized due to missing API key.")
 
-MODEL_NANO = "gpt-4.1"
 
 def extract_keywords_from_vacancy(vacancy_text: str):
     """
@@ -34,7 +34,7 @@ def extract_keywords_from_vacancy(vacancy_text: str):
     """
     try:
         response = sync_client.beta.chat.completions.parse(
-            model=MODEL_NANO,
+            model=os.getenv("OPENAI_MODEL"),
             messages=[
                 {"role": "system", "content": "You are an expert keyword extractor for recruitment AI System. "},
                 {"role": "user", "content": f"""
@@ -161,7 +161,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": {
-                "model": MODEL_NANO, # Use Nano model
+                "model": os.getenv("OPENAI_MODEL"),
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
