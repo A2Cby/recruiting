@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import json
 import logging
@@ -322,22 +323,25 @@ async def create_and_upload_batch_file(batch_input: List[Dict[str, Any]]) -> str
         logger.error(f"Failed to create batch input file: {e}")
         return None
 
-    try:
-        with open(batch_input_filename, "rb") as f:
-             batch_file = await client.files.create(file=f, purpose="batch")
-        logger.info(f"Batch file uploaded to OpenAI: {batch_file.id}")
-        return batch_file.id
-    except Exception as e:
-         logger.error(f"Failed to upload batch file to OpenAI: {e}")
-         return None
-    finally:
-        # Clean up local file after attempting upload
-        if os.path.exists(batch_input_filename):
-            try:
-                os.remove(batch_input_filename)
-                logger.info(f"Cleaned up temporary file: {batch_input_filename}")
-            except OSError as e:
-                logger.error(f"Error removing temporary file {batch_input_filename}: {e}")
+
+    for attempt in range(10):
+        try:
+            with open(batch_input_filename, "rb") as f:
+                 batch_file = await client.files.create(file=f, purpose="batch")
+            logger.info(f"Batch file uploaded to OpenAI: {batch_file.id}")
+            # Clean up local file after attempting upload
+            if os.path.exists(batch_input_filename):
+                try:
+                    os.remove(batch_input_filename)
+                    logger.info(f"Cleaned up temporary file: {batch_input_filename}")
+                except OSError as e:
+                    logger.error(f"Error removing temporary file {batch_input_filename}: {e}")
+            return batch_file.id
+        except Exception as e:
+             import time
+             time.sleep(10*random.randint(1, 10))
+             logger.error(f"Failed to upload batch file to OpenAI: {e}")
+    return None
 
 async def create_batch_job(input_file_id: str, metadata: Dict[str, str]) -> str | None:
     """Creates the OpenAI batch job."""
