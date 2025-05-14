@@ -27,6 +27,7 @@ async def match_candidates_batch_endpoint(
         raise HTTPException(status_code=503, detail="OpenAI client (async or sync) not configured.")
 
     logger.info("Received request to match candidates.")
+    logger.info(f"Vacancy: {request}")
     try:
         # 1. Extract Keywords (Sync call)
         logger.info("Extracting keywords from vacancy description...")
@@ -54,6 +55,8 @@ async def match_candidates_batch_endpoint(
         input_file_id = await openai_service.create_and_upload_batch_file(batch_input)
         if not input_file_id:
             raise HTTPException(status_code=500, detail="Failed to upload batch input file to OpenAI.")
+        logger.info(f"Batch input file created and uploaded with ID: {input_file_id}")
+
 
         # 5. Create Batch Job
         metadata = {
