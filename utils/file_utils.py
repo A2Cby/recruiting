@@ -86,7 +86,7 @@ def save_results_to_file(scores: List[CandidateScore],
             json.dump(final_output, f, indent=2, ensure_ascii=False)
         logger.info(f"Formatted results saved to {filepath}")
         # send to the clients API
-        send_candidates_to_api(final_output)
+        response = send_candidates_to_api(final_output)
         logger.info(f"Formatted results sent to HRBase API.")
         return filepath
     except IOError as e:
