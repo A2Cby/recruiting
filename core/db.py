@@ -1,31 +1,48 @@
 import logging
+import os
 from typing import List, Dict, Optional
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
+from sshtunnel import SSHTunnelForwarder
 
-from core.config import settings
 from schemas.candidate import CandidateData
-
+import dotenv
+dotenv.load_dotenv()
 logger = logging.getLogger(__name__)
 
 def get_db_connection():
-    """Establishes and returns a database connection using settings."""
     try:
+        logger.info("Establishing database connection via SSH tunnel...")
+        ssh_tunnel_params = {
+            'ssh_address_or_host': os.getenv("SSH_HOST"),
+            'ssh_port': int(os.getenv("SSH_PORT")),  # Ensure port is an integer
+            'ssh_username': os.getenv("SSH_USER"),
+            'remote_bind_address': (os.getenv("DB_HOST"), int(os.getenv("DB_PORT"))),  # Ensure port is an integer
+            "ssh_password": os.getenv("SSH_PASSWORD"),
+        }
+
+        # Create SSH tunnel and store in global variable
+        tunnel = SSHTunnelForwarder(**ssh_tunnel_params)
+        tunnel.start()
+
+        logger.info(f"SSH Tunnel established to {ssh_tunnel_params["ssh_address_or_host"]} on local port {tunnel.local_bind_port}")
+
+        # Connect to database through the SSH tunnel
         conn = psycopg2.connect(
-            dbname=settings.db_name,
-            user=settings.db_user,
-            password=settings.db_password,
-            host=settings.db_host,
-            port=settings.db_port
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=tunnel.local_bind_host,
+            port=tunnel.local_bind_port
         )
-        logger.info("Database connection established successfully.")
-        return conn
-    except psycopg2.OperationalError as e:
-        logger.error(f"Database connection failed: {e}")
-        # Don't raise HTTPException here directly, let the caller handle it
-        # based on context (e.g., during startup vs. during request)
+
+        logger.info("Database connection through SSH tunnel established successfully.")
+        return conn, tunnel
+            
+    except Exception as e:
+        logger.error(f"SSH tunnel or database connection failed: {e}")
         return None
 
 def fetch_candidates_from_db(keywords: Optional[List[str]] = None) -> List[CandidateData]:
@@ -105,7 +122,7 @@ LEFT JOIN pos ON p.username = pos.username
         final_query += " WHERE " + " AND ".join(where_clauses) # Use AND if combining with other future clauses
     final_query += " LIMIT 1000;"
 
-    conn = get_db_connection()
+    conn, ssh_tunnel = get_db_connection()
     if not conn:
          raise HTTPException(status_code=503, detail="Database connection unavailable.")
 
@@ -154,13 +171,21 @@ LEFT JOIN pos ON p.username = pos.username
         if conn:
             conn.close()
             logger.info("Database connection closed.")
+        
+        # Close SSH tunnel if it exists
+        if ssh_tunnel:
+            try:
+                ssh_tunnel.stop()
+                logger.info("SSH tunnel closed.")
+            except Exception as e:
+                logger.error(f"Error closing SSH tunnel: {e}")
 
 def fetch_candidate_details(candidate_ids: List[int]) -> Dict[int, Dict[str, str]]:
     """Fetches fullName and profileURL for a given list of candidate IDs."""
     if not candidate_ids:
         return {}
 
-    conn = get_db_connection()
+    conn, ssh_tunnel = get_db_connection()
     if not conn:
         logger.error("Cannot fetch candidate details: Database connection unavailable.")
         return {}
@@ -186,4 +211,12 @@ def fetch_candidate_details(candidate_ids: List[int]) -> Dict[int, Dict[str, str
         if conn:
             conn.close()
             logger.info("Database connection closed after fetching details.")
+        
+        # Close SSH tunnel if it exists
+        if ssh_tunnel:
+            try:
+                ssh_tunnel.stop()
+                logger.info("SSH tunnel closed after fetching details.")
+            except Exception as e:
+                logger.error(f"Error closing SSH tunnel: {e}")
     return details 

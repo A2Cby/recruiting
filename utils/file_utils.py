@@ -31,6 +31,12 @@ def send_candidates_to_api(final_output):
     except requests.RequestException as e:
         logger.error(f"Failed to send candidates to HRBase API: {e}")
         return None
+def datetime_serializer(obj):
+    """Custom JSON serializer for objects not serializable by default json code"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 def save_results_to_file(scores: List[CandidateScore],
                          vacancy_id: str | int | None = None,
                          filename_prefix="candidate_scores") -> str | None:
@@ -47,7 +53,7 @@ def save_results_to_file(scores: List[CandidateScore],
         return None
 
     # The input `scores` list now contains CandidateScore objects
-    # that already have fullName and profileURL populated.
+    # that already have fullName, profileURL, and detailed data populated.
 
     # 1. Format the output
     output_candidates = []
@@ -55,17 +61,28 @@ def save_results_to_file(scores: List[CandidateScore],
         # Get details directly from the score_item
         profile_url = score_item.profileURL or "" # Use empty string if None
         full_name = score_item.fullName or "N/A" # Use N/A if None
+        
+        # Create base candidate info
         output_candidate = {
             "name": full_name,
             "sourceId": str(score_item.candidate_id),
             "sourceUrl": profile_url,
             "sourceType": "linkedin",
-            "vacancyId": int(vacancy_id),
+            "vacancyId": int(vacancy_id) if vacancy_id else 0,
             "info": {
                 "score": score_item.score,
                 "reasoning": score_item.reasoning or ""
             }
         }
+        
+        # Add detailed candidate data if available
+        if hasattr(score_item, 'person_data'):
+            output_candidate["details"] = {
+                "person": score_item.person_data,
+                "education": score_item.education_data if hasattr(score_item, 'education_data') else [],
+                "positions": score_item.position_data if hasattr(score_item, 'position_data') else []
+            }
+        
         output_candidates.append(output_candidate)
 
     # 2. Sort the formatted candidates by score (descending)
@@ -83,11 +100,20 @@ def save_results_to_file(scores: List[CandidateScore],
     # 5. Save to file
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(final_output, f, indent=2, ensure_ascii=False)
+            # Use the custom serializer to handle datetime objects
+            json.dump(final_output, f, indent=2, ensure_ascii=False, default=datetime_serializer)
         logger.info(f"Formatted results saved to {filepath}")
-        # send to the clients API
-        response = send_candidates_to_api(final_output)
-        logger.info(f"Formatted results sent to HRBase API.")
+
+        try:
+            try:
+                # send to the clients API
+                response = send_candidates_to_api(final_output)
+                logger.info(f"Formatted results sent to HRBase API.")
+            except Exception as api_error:
+                logger.error(f"Failed to send candidates to HRBase API: {api_error}")
+        except Exception as api_error:
+            logger.error(f"Failed to send candidates to HRBase API: {api_error}")
+
         return filepath
     except IOError as e:
         logger.error(f"Failed to save formatted results to file {filepath}: {e}")

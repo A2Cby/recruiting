@@ -40,7 +40,7 @@ async def match_candidates_batch_endpoint(
 
 
         # 3. Fetch Candidates
-        fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
+        # fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
         candidates: List[CandidateData] = fetch_candidates_from_db(keywords=keywords)
         if not candidates:
             logger.warning("No candidates found matching the criteria.")
@@ -68,7 +68,7 @@ async def match_candidates_batch_endpoint(
         batch_job_id = await openai_service.create_batch_job(input_file_id, metadata)
         if not batch_job_id:
             raise HTTPException(status_code=500, detail="Failed to create OpenAI batch job.")
-
+        logger.info(f"Created OpenAI batch job {batch_job_id} with metadata: {metadata}")
         # 6. Add background task to monitor and process the job
         background_tasks.add_task(openai_service.monitor_and_process_batch_job, batch_job_id, candidates, request.vacancy_id)
         logger.info(f"Background task added for monitoring batch job {batch_job_id}")

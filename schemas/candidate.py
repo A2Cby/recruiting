@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel
+
 class CandidateData(BaseModel):
     id: int
     text: str
@@ -9,7 +12,11 @@ class CandidateData(BaseModel):
 
 class CandidateScore(BaseModel):
     candidate_id: int
-    score: float = Field(..., example=0.95)
-    reasoning: Optional[str] = None # Optional: Get reasoning from OpenAI 
-    profileURL: Optional[str] = None # Added profileURL 
-    fullName: Optional[str] = None # Added fullName 
+    score: float
+    reasoning: Optional[str] = None
+    profileURL: Optional[str] = None
+    fullName: Optional[str] = None
+    # Additional fields from database that will be populated dynamically
+    person_data: Optional[Dict[str, Any]] = None
+    education_data: Optional[List[Dict[str, Any]]] = None
+    position_data: Optional[List[Dict[str, Any]]] = None

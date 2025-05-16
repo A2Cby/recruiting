@@ -7,8 +7,11 @@ import asyncio
 from datetime import datetime
 from typing import List, Dict, Any
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from openai import OpenAI, AsyncOpenAI
 from openai import APIError, RateLimitError, NotFoundError # Import specific errors
+from sshtunnel import SSHTunnelForwarder
 
 from core.config import settings
 # Import fetch_candidate_details from db service
@@ -174,6 +177,146 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
         })
     return batch_input
 
+def fetch_candidate_db_details(candidate_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+    """
+    Fetches all candidate information from the database for the given IDs.
+    Returns a dictionary with candidate_id as key and all details as values.
+    Excludes vector columns.
+    """
+    if not candidate_ids:
+        return {}
+    
+    details_map = {}
+    
+    # SSH tunnel parameters
+    ssh_tunnel_params = {
+        'ssh_address_or_host': os.getenv("SSH_HOST"),
+        'ssh_port': int(os.getenv("SSH_PORT")),
+        'ssh_username': os.getenv("SSH_USER"),
+        'remote_bind_address': (os.getenv("DB_HOST"), int(os.getenv("DB_PORT"))),
+        "ssh_password": os.getenv("SSH_PASSWORD"),
+    }
+    
+    tunnel = None
+    conn = None
+    
+    try:
+        # Establish SSH tunnel
+        tunnel = SSHTunnelForwarder(**ssh_tunnel_params)
+        tunnel.start()
+        logger.info(f"SSH Tunnel established to {os.getenv('SSH_HOST')} on local port {tunnel.local_bind_port}")
+        
+        # Connect to database through the SSH tunnel
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=tunnel.local_bind_host,
+            port=tunnel.local_bind_port
+        )
+        logger.info("Database connection successful via SSH tunnel.")
+        
+        # Fetch person data (excluding vector columns)
+        person_query = """
+        SELECT 
+            id, "fullName", headline, summary, location, "profilePicture", 
+            "profileURL", username, skills, country, city, "countryCode", 
+            date_added, vacancy_id
+        FROM 
+            person_data 
+        WHERE 
+            id = ANY(%s);
+        """
+        
+        # Fetch education data (excluding vector columns)
+        education_query = """
+        SELECT 
+            id, username, start_date, end_date, "fieldOfStudy", 
+            degree, grade, "schoolName", description, activities, 
+            url, "schoolId"
+        FROM 
+            education_data 
+        WHERE 
+            username IN (
+                SELECT username FROM person_data WHERE id = ANY(%s)
+            );
+        """
+        
+        # Fetch position data (excluding vector columns)
+        position_query = """
+        SELECT 
+            id, username, "companyId", "companyName", "companyUsername", 
+            "companyURL", "companyLogo", "companyIndustry", "companyStaffCountRange", 
+            title, location, description, "employmentType", start_date, end_date
+        FROM 
+            position_data 
+        WHERE 
+            username IN (
+                SELECT username FROM person_data WHERE id = ANY(%s)
+            );
+        """
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # First, get all person data
+            cur.execute(person_query, (candidate_ids,))
+            person_results = cur.fetchall()
+            
+            # Initialize details map with person data
+            for person in person_results:
+                person_id = person['id']
+                username = person['username']
+                details_map[person_id] = {
+                    'person_data': dict(person),
+                    'education_data': [],
+                    'position_data': []
+                }
+            
+            # Get usernames for easier lookup
+            usernames_map = {person['id']: person['username'] for person in person_results}
+            
+            # Next, get education data
+            cur.execute(education_query, (candidate_ids,))
+            education_results = cur.fetchall()
+            
+            # Add education data to respective candidates
+            for edu in education_results:
+                username = edu['username']
+                # Find the candidate_id for this username
+                for candidate_id, candidate_username in usernames_map.items():
+                    if candidate_username == username:
+                        details_map[candidate_id]['education_data'].append(dict(edu))
+                        break
+            
+            # Finally, get position data
+            cur.execute(position_query, (candidate_ids,))
+            position_results = cur.fetchall()
+            
+            # Add position data to respective candidates
+            for pos in position_results:
+                username = pos['username']
+                # Find the candidate_id for this username
+                for candidate_id, candidate_username in usernames_map.items():
+                    if candidate_username == username:
+                        details_map[candidate_id]['position_data'].append(dict(pos))
+                        break
+        
+        logger.info(f"Fetched detailed information for {len(details_map)} candidates from database")
+        return details_map
+    
+    except Exception as e:
+        logger.error(f"Error fetching candidate details from database: {e}")
+        return {}
+    finally:
+        # Close database connection
+        if conn:
+            conn.close()
+            logger.info("Database connection closed.")
+        
+        # Close SSH tunnel
+        if tunnel and tunnel.is_active:
+            tunnel.stop()
+            logger.info("SSH Tunnel closed.")
+            
 def process_openai_results(results_content: str, initial_candidates: List[CandidateData], vacancy_id) -> None:
     """Parses OpenAI results and combines with initial candidate data before saving."""
     final_scores: List[CandidateScore] = []
@@ -184,6 +327,10 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
     try:
         results_lines = results_content.strip().split('\n')
         logger.info(f"Processing {len(results_lines)} lines from OpenAI results file.")
+        
+        # Track candidate IDs for fetching detailed information
+        processed_candidate_ids = []
+        
         for line in results_lines:
             if not line:
                 continue
@@ -215,6 +362,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
 
                 if custom_id:
                     candidate_id = int(custom_id.replace("candidate_", ""))
+                    processed_candidate_ids.append(candidate_id)
                     score_data = json.loads(response_json_str)
 
                     # Get details from the initial data map
@@ -222,7 +370,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
                     profile_url = initial_detail.profileURL if initial_detail else None
                     full_name = initial_detail.fullName if initial_detail else "N/A"
 
-                    # Create the complete CandidateScore object
+                    # Create the basic CandidateScore object (will be enhanced with DB data later)
                     final_scores.append(CandidateScore(
                         candidate_id=candidate_id,
                         score=score_data.get("score", 0.0),
@@ -236,6 +384,30 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
             except (json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError) as parse_error:
                 logger.error(f"Error parsing individual result line: {parse_error}. Line: {line}")
                 continue # Skip malformed lines
+
+        # Fetch detailed candidate information from database
+        if processed_candidate_ids:
+            logger.info(f"Fetching detailed information for {len(processed_candidate_ids)} candidates...")
+            db_details = fetch_candidate_db_details(processed_candidate_ids)
+            
+            # Enhance final_scores with database details
+            for i, score in enumerate(final_scores):
+                candidate_id = score.candidate_id
+                if candidate_id in db_details:
+                    # Add all database details to the CandidateScore object
+                    for key, value in db_details[candidate_id].items():
+                        setattr(final_scores[i], key, value)
+                    logger.debug(f"Enhanced candidate ID {candidate_id} with database details")
+
+                    # Verify data was attached
+                    if hasattr(final_scores[i], 'person_data'):
+                        logger.debug(f"Person data attached for candidate {candidate_id}: {final_scores[i].person_data.get('fullName', 'N/A')}")
+                    if hasattr(final_scores[i], 'education_data'):
+                        logger.debug(f"Education data count for candidate {candidate_id}: {len(final_scores[i].education_data)}")
+                    if hasattr(final_scores[i], 'position_data'):
+                        logger.debug(f"Position data count for candidate {candidate_id}: {len(final_scores[i].position_data)}")
+                else:
+                    logger.warning(f"No database details found for candidate ID {candidate_id}")
 
     except Exception as e:
         logger.error(f"Error processing OpenAI results content: {e}")
@@ -290,8 +462,7 @@ async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[
                 break # Exit loop on failure/cancellation
 
             # Wait before polling again
-            poll_interval = 60
-            await asyncio.sleep(poll_interval)
+            await asyncio.sleep(timeout_seconds)
 
         except RateLimitError as rle:
              logger.warning(f"Rate limit hit while checking batch job {batch_id}. Retrying after delay... Error: {rle}")
