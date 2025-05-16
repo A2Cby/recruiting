@@ -66,82 +66,81 @@ async def process_new_vacancies_and_call_api():
         'remote_bind_address': (os.getenv("DB_HOST"), int(os.getenv("DB_PORT"))), # Ensure port is an integer
         "ssh_password": os.getenv("SSH_PASSWORD"),
     }
+    for i in range(10):
+        try:
+            with SSHTunnelForwarder(**ssh_tunnel_params) as tunnel:
+                print(f"SSH Tunnel established to {os.getenv("SSH_HOST")} on local port {tunnel.local_bind_port}")
 
-    try:
-        with SSHTunnelForwarder(**ssh_tunnel_params) as tunnel:
-            print(f"SSH Tunnel established to {os.getenv("SSH_HOST")} on local port {tunnel.local_bind_port}")
+                conn = None
+                try:
+                    conn = psycopg2.connect(
+                        dbname=os.getenv("DB_NAME"),
+                        user=os.getenv("DB_USER"),
+                        password=os.getenv("DB_PASSWORD"),
+                        host=tunnel.local_bind_host,
+                        port=tunnel.local_bind_port
+                    )
+                    # conn.autocommit = False # Manual commit will be handled per task or at the end if needed differently.
+                                            # For individual updates as in process_single_vacancy, autocommit=False and then conn.commit() is fine.
+                    print("Database connection successful via SSH tunnel.")
 
-            conn = None
-            try:
-                conn = psycopg2.connect(
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD"),
-                    host=tunnel.local_bind_host,
-                    port=tunnel.local_bind_port
-                )
-                # conn.autocommit = False # Manual commit will be handled per task or at the end if needed differently.
-                                        # For individual updates as in process_single_vacancy, autocommit=False and then conn.commit() is fine.
-                print("Database connection successful via SSH tunnel.")
+                    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client: # Added a default timeout
+                        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                            query_select = """
+                                           SELECT id, title, description, location, skills, places, kinds
+                                           FROM vacancies_vec
+                                           WHERE need_to_be_processed = TRUE
+                                           Limit 5;
+                                           """
+                            cur.execute(query_select)
+                            vacancies_to_process = cur.fetchall()
 
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client: # Added a default timeout
-                    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                        query_select = """
-                                       SELECT id, title, description
-                                       FROM vacancies_vec
-                                       WHERE need_to_be_processed = TRUE;
-                                       """
-                        cur.execute(query_select)
-                        vacancies_to_process = cur.fetchall()
+                            if not vacancies_to_process:
+                                print("No new vacancies to process.")
+                                return
 
-                        if not vacancies_to_process:
-                            print("No new vacancies to process.")
-                            return
+                            print(f"Found {len(vacancies_to_process)} vacancies to process.")
 
-                        print(f"Found {len(vacancies_to_process)} vacancies to process.")
+                            tasks = []
+                            for vacancy_row in vacancies_to_process:
+                                # Pass the connection object to each task
+                                tasks.append(process_single_vacancy(client, conn, vacancy_row))
 
-                        tasks = []
-                        for vacancy_row in vacancies_to_process:
-                            # Pass the connection object to each task
-                            tasks.append(process_single_vacancy(client, conn, vacancy_row))
+                            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-                        successful_updates = 0
-                        failed_updates = 0
-                        for result in results:
-                            if isinstance(result, Exception):
-                                print(f"A task failed with an unhandled exception: {result}")
-                                failed_updates += 1
-                            elif isinstance(result, tuple) and len(result) == 3:
-                                success, vacancy_id, error_message = result
-                                if success:
-                                    successful_updates += 1
-                                else:
+                            successful_updates = 0
+                            failed_updates = 0
+                            for result in results:
+                                if isinstance(result, Exception):
+                                    print(f"A task failed with an unhandled exception: {result}")
                                     failed_updates += 1
-                                    print(f"Failed to process vacancy ID {vacancy_id}: {error_message}")
-                            else:
-                                print(f"An unexpected result type was returned from a task: {result}")
-                                failed_updates +=1
+                                elif isinstance(result, tuple) and len(result) == 3:
+                                    success, vacancy_id, error_message = result
+                                    if success:
+                                        successful_updates += 1
+                                    else:
+                                        failed_updates += 1
+                                        print(f"Failed to process vacancy ID {vacancy_id}: {error_message}")
+                                else:
+                                    print(f"An unexpected result type was returned from a task: {result}")
+                                    failed_updates +=1
+                            print(f"Processing complete. Successful updates: {successful_updates}, Failed updates: {failed_updates}")
 
-
-                        print(f"Processing complete. Successful updates: {successful_updates}, Failed updates: {failed_updates}")
-
-            except psycopg2.Error as db_err:
-                print(f"Database error: {db_err}")
-                if conn:
-                    conn.rollback()
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
-                if conn:
-                    conn.rollback()
-            finally:
-                if conn:
-                    conn.close()
-                    print("Database connection closed.")
-        print("SSH Tunnel closed.")
-    except Exception as tunnel_err:
-        print(f"SSH Tunnel setup or main processing error: {tunnel_err}")
+                except psycopg2.Error as db_err:
+                    print(f"Database error: {db_err}")
+                    if conn:
+                        conn.rollback()
+                except Exception as e:
+                    print(f"An unexpected error occurred: {e}")
+                    if conn:
+                        conn.rollback()
+                finally:
+                    if conn:
+                        conn.close()
+                        print("Database connection closed.")
+            print("SSH Tunnel closed.")
+        except Exception as tunnel_err:
+            print(f"SSH Tunnel setup or main processing error: {tunnel_err}")
 
 
 if __name__ == "__main__":
