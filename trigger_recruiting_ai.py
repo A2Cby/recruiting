@@ -89,7 +89,7 @@ async def process_new_vacancies_and_call_api():
                         query_select = """
                                        SELECT id, title, description
                                        FROM vacancies_vec
-                                       WHERE need_to_be_processed = TRUE LIMIT 1;
+                                       WHERE need_to_be_processed = TRUE;
                                        """
                         cur.execute(query_select)
                         vacancies_to_process = cur.fetchall()
