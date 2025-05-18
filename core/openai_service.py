@@ -430,7 +430,7 @@ async def monitor_and_process_batch_job(batch_id: str, initial_candidates: List[
 
     logger.info(f"Background task started: Monitoring batch job {batch_id} for {len(initial_candidates)} candidates.")
     start_time = time.time()
-    timeout_seconds = 600 # 10 min timeout
+    timeout_seconds = 300 # 5 min timeout
 
     while True:
         elapsed_time = time.time() - start_time

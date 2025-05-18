@@ -45,7 +45,7 @@ def get_db_connection():
         logger.error(f"SSH tunnel or database connection failed: {e}")
         return None
 
-def fetch_candidates_from_db(keywords: Optional[List[str]] = None) -> List[CandidateData]:
+def fetch_candidates_from_db(keywords: Optional[List[str]] = None):
     """Fetches and formats candidate data, optionally filtering by keywords in skills or summary."""
     base_query = """
 WITH edu AS (
@@ -120,7 +120,7 @@ LEFT JOIN pos ON p.username = pos.username
     final_query = base_query
     if where_clauses:
         final_query += " WHERE " + " AND ".join(where_clauses) # Use AND if combining with other future clauses
-    final_query += " LIMIT 1000;"
+    final_query += " LIMIT 800;"
 
     conn, ssh_tunnel = get_db_connection()
     if not conn:

@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime
 from typing import List, Dict
+from core.db import get_db_connection
+from dotenv import load_dotenv
 
 from schemas.candidate import CandidateScore
 from core.config import settings
@@ -12,30 +14,93 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 import requests
 def send_candidates_to_api(final_output):
-    res_auth = requests.post(
-        'https://gate.hrbase.info/auth/login',
-        data={"email": os.getenv("email"), "password": os.getenv("password")},
-    )
-    logger.info("Successfully logged in to HRBase API.")
-    tkn = res_auth.content[16:-2].decode("utf-8")
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {tkn}"  # or whatever auth is needed
-    }
-
-    try:
-        response = requests.post("https://gate.hrbase.info/imported-candidates/bulk-create", headers=headers, json=final_output)
-        response.raise_for_status()
-        logger.info("Successfully sent candidates to HRBase API.")
-        return response.json()
-    except requests.RequestException as e:
-        logger.error(f"Failed to send candidates to HRBase API: {e}")
-        return None
+    candidates = final_output["candidates"]
+    for i in range(0, len(candidates), 5):
+        res_auth = requests.post(
+            'https://gate.hrbase.info/auth/login',
+            data={"email": os.getenv("email"), "password": os.getenv("password")},
+        )
+        logger.info("Successfully logged in to HRBase API.")
+        tkn = res_auth.content[16:-2].decode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {tkn}"
+        }
+        payload = {"candidates": candidates[i:i + 5]}
+        response = requests.post(
+            "https://gate.hrbase.info/imported-candidates/bulk-create",
+            headers=headers,
+            json=payload
+        )
+        try:
+            response.raise_for_status()
+            logger.info("Sent %s candidates OK", len(payload["candidates"]))
+            import time
+            time.sleep(30)
+        except requests.HTTPError as exc:
+            logger.error("Chunk %s-%s failed (%s): %s",
+                         i, i + 5, response.status_code, response.text)
+    logger.info(f"Candidates sent to the api")
 def datetime_serializer(obj):
     """Custom JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, datetime):
         return obj.isoformat()
     raise TypeError(f"Type {type(obj)} not serializable")
+
+def insert_candidates_to_db(vacancy_id: int, data: dict) -> None:             # ➋  NEW
+    """
+    Store selected candidates in `recruting_selected_candidates`.
+    The whole payload is saved as a JSON string (VARCHAR(50000)).
+    """
+    conn_tunnel = get_db_connection()
+    if not conn_tunnel:
+        logger.error("Skipping DB insert – couldn't obtain database connection.")
+        return
+
+    conn, tunnel = conn_tunnel  # unpack connection and tunnel objects
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO recruting_selected_candidates
+                    (vacancy_id, date_time, data_json)
+                VALUES (%s, %s, %s)
+                """,
+                (
+                    vacancy_id,
+                    datetime.utcnow(),
+                    json.dumps(
+                        data,
+                        ensure_ascii=False,
+                        default=datetime_serializer
+
+                    )[:50000],  # fits VARCHAR(50000)
+                ),
+            )
+        logger.info(
+            "Saved %s candidates for vacancy %s to PostgreSQL.",
+            len(data.get("candidates", [])),
+            vacancy_id,
+        )
+
+        with conn.cursor() as cur_update:  # Use a new cursor for thread safety
+            query_update = "UPDATE vacancies_vec SET need_to_be_processed = FALSE WHERE id = %s;"
+            cur_update.execute(query_update, (vacancy_id,))
+            conn.commit()
+        print(f"Vacancy ID {vacancy_id} marked as processed in DB.")
+    except Exception as exc:
+        logger.error("Database insert failed: %s", exc)
+    finally:
+        # Always close the resources we opened
+        try:
+            conn.close()
+        except Exception:
+            pass
+        try:
+            tunnel.stop()
+        except Exception:
+            pass
+
 
 def save_results_to_file(scores: List[CandidateScore],
                          vacancy_id: str | int | None = None,
@@ -77,7 +142,7 @@ def save_results_to_file(scores: List[CandidateScore],
         
         # Add detailed candidate data if available
         if hasattr(score_item, 'person_data'):
-            output_candidate["details"] = {
+            output_candidate["info"]["details"] = {
                 "person": score_item.person_data,
                 "education": score_item.education_data if hasattr(score_item, 'education_data') else [],
                 "positions": score_item.position_data if hasattr(score_item, 'position_data') else []
@@ -96,23 +161,18 @@ def save_results_to_file(scores: List[CandidateScore],
 
     # 4. Create the final dictionary with the top candidates
     final_output = {"candidates": top_50_candidates}
+    final_output: dict = json.loads(json.dumps(final_output, default=datetime_serializer))
 
     # 5. Save to file
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             # Use the custom serializer to handle datetime objects
             json.dump(final_output, f, indent=2, ensure_ascii=False, default=datetime_serializer)
+            f.write("\n")
         logger.info(f"Formatted results saved to {filepath}")
 
-        try:
-            try:
-                # send to the clients API
-                response = send_candidates_to_api(final_output)
-                logger.info(f"Formatted results sent to HRBase API.")
-            except Exception as api_error:
-                logger.error(f"Failed to send candidates to HRBase API: {api_error}")
-        except Exception as api_error:
-            logger.error(f"Failed to send candidates to HRBase API: {api_error}")
+        send_candidates_to_api(final_output)
+        insert_candidates_to_db(int(vacancy_id) if vacancy_id else 0, final_output)
 
         return filepath
     except IOError as e:
