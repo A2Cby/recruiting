@@ -40,7 +40,10 @@ async def match_candidates_batch_endpoint(
 
 
         # 3. Fetch Candidates
-        fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
+        try:
+            fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
+        except Exception as e:
+            logger.info(f"No linkedin candidates fetched: {e}")
         candidates: List[CandidateData] = fetch_candidates_from_db(keywords=keywords)
         if not candidates:
             logger.warning("No candidates found matching the criteria.")
