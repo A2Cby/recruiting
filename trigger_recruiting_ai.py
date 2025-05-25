@@ -25,7 +25,7 @@ async def process_single_vacancy(client, conn, vacancy_row):
         "vacancy_text": vacancy_text
     }
 
-    api_url = f"http://0.0.0.0:8910/api/v1/matching/match_candidates_batch"
+    api_url = f"http://93.127.132.57:8910/api/v1/matching/match_candidates_batch"
     print(f"Calling API for vacancy ID {vacancy_id}: {api_url}")
 
     try:
@@ -74,17 +74,16 @@ async def process_new_vacancies_and_call_api():
                     host=tunnel.local_bind_host,
                     port=tunnel.local_bind_port
                 )
-                # conn.autocommit = False # Manual commit will be handled per task or at the end if needed differently.
-                                        # For individual updates as in process_single_vacancy, autocommit=False and then conn.commit() is fine.
+                # conn.autocommit = False
                 print("Database connection successful via SSH tunnel.")
 
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client: # Added a default timeout
+                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
                     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                         query_select = """
                                        SELECT id, title, description, location, skills, places, kinds
                                        FROM vacancies_vec
                                        WHERE need_to_be_processed = TRUE
-                                       Limit 2;
+                                       Limit 1;
                                        """
                         cur.execute(query_select)
                         vacancies_to_process = cur.fetchall()

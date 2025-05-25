@@ -18,7 +18,7 @@ def send_candidates_to_api(final_output):
     for i in range(0, len(candidates), 5):
         res_auth = requests.post(
             'https://gate.hrbase.info/auth/login',
-            data={"email": os.getenv("email"), "password": os.getenv("password")},
+            data={"email": os.getenv("EMAIL"), "password": os.getenv("PASSWORD")},
         )
         logger.info("Successfully logged in to HRBase API.")
         tkn = res_auth.content[16:-2].decode("utf-8")
