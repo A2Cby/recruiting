@@ -15,7 +15,10 @@ async def process_single_vacancy(client, conn, vacancy_row):
     vacancy_id = vacancy_row['id']
     vacancy_title = vacancy_row['title']
     vacancy_description = vacancy_row['description']
-
+    with conn.cursor() as cur_update:  # Use a new cursor for thread safety
+        query_update = "UPDATE vacancies_vec SET need_to_be_processed = FALSE WHERE id = %s;"
+        cur_update.execute(query_update, (vacancy_id,))
+        conn.commit()
     # Construct vacancy_text as expected by VacancyMatchRequest
     vacancy_text = f"{vacancy_title or ''} {vacancy_description or ''}".strip()
 
@@ -30,10 +33,6 @@ async def process_single_vacancy(client, conn, vacancy_row):
 
     try:
         response = await client.post(api_url, json=payload)
-        with conn.cursor() as cur_update:  # Use a new cursor for thread safety
-            query_update = "UPDATE vacancies_vec SET need_to_be_processed = FALSE WHERE id = %s;"
-            cur_update.execute(query_update, (vacancy_id,))
-            conn.commit()
         if response.status_code == 202:
             print(f"API call successful for vacancy ID {vacancy_id}. Response: {response.json()}")
             # Update the vacancy as processed in the database
@@ -80,7 +79,7 @@ async def process_new_vacancies_and_call_api():
                 # conn.autocommit = False
                 print("Database connection successful via SSH tunnel.")
 
-                async with httpx.AsyncClient(timeout=httpx.Timeout(6000.0)) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
                     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                         query_select = """
                                        SELECT id, title, description, location, skills, places, kinds
