@@ -40,10 +40,11 @@ def extract_keywords_from_vacancy(vacancy_text: str):
         response = sync_client.beta.chat.completions.parse(
             model=os.getenv("OPENAI_MODEL"),
             messages=[
-                {"role": "system", "content": "You are an expert keyword extractor for recruitment AI System. "},
+                {"role": "system", "content": "You are an expert keyword extractor for the recruitment AI System. "},
                 {"role": "user", "content": f"""
-Extract the most important keywords from the vacancy description to search for candidates in Linkedin.
+Extract the most important keywords from the vacancy description to search for candidates on Linkedin.
 Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 10.
+We are always looking for Russian-speaking candidates, so ALWAYS add "Russian language" to the keywords.
 The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
 
 Also, provide a list of country codes for candidate search locations. These codes **must** be valid `LocationCode` enum values (e.g., UNITED_STATES, GERMANY, FRANCE are some examples of valid codes; refer to the `LocationCode` schema for all options). If the vacancy does not specify countries, return an empty list. Base your answer on the vacancy description.
@@ -51,7 +52,7 @@ Also, provide a list of country codes for candidate search locations. These code
 When you see a country name in the vacancy you MUST convert it to the exact enum in LocationCode:
 Poland -> POLAND, Germany -> GERMANY
 If the whole region instead of a country is mentioned, list all countries inside of the region. For example, EU -> [FRANCE, BELGIUM, SPAIN, ENGLAND, GERMANY, ITALY, NETHERLANDS, POLAND, SWITZERLAND, SWEDEN, AUSTRIA, BULGARIA, CROATIA, CZECH_REPUBLIC, DENMARK, ESTONIA, FINLAND, GREECE, HUNGARY, ROMANIA, PORTUGAL, NORWAY, LITHUANIA, LUXEMBOURG, SLOVAKIA] and so on.
-If no country is mentioned, return an empty list.
+If no country is mentioned, return an empty list. 
                             Vacancy Description:
                             ---
                             {vacancy_text}
