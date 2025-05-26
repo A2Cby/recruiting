@@ -31,3 +31,4 @@ docker run -d --env-file .env -p 8910:8910 --restart unless-stopped --name recru
 
 Pay attention to the ports!
 
+docker exec recruiting-api python /trigger_recruiting_ai.py

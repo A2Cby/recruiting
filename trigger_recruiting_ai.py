@@ -77,7 +77,7 @@ async def process_new_vacancies_and_call_api():
                 # conn.autocommit = False
                 print("Database connection successful via SSH tunnel.")
 
-                async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+                async with httpx.AsyncClient(timeout=httpx.Timeout(6000.0)) as client:
                     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                         query_select = """
                                        SELECT id, title, description, location, skills, places, kinds
