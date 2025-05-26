@@ -165,11 +165,11 @@ def save_results_to_file(scores: List[CandidateScore],
 
     # 5. Save to file
     try:
-        with open(filepath, 'w', encoding='utf-8') as f:
+        """with open(filepath, 'w', encoding='utf-8') as f:
             # Use the custom serializer to handle datetime objects
             json.dump(final_output, f, indent=2, ensure_ascii=False, default=datetime_serializer)
             f.write("\n")
-        logger.info(f"Formatted results saved to {filepath}")
+        logger.info(f"Formatted results saved to {filepath}")"""
 
         send_candidates_to_api(final_output)
         insert_candidates_to_db(int(vacancy_id) if vacancy_id else 0, final_output)
