@@ -64,6 +64,7 @@ If no country is mentioned, return an empty list.
             temperature=0.2
         )
         keywords = response.choices[0].message.parsed.keywords
+        keywords += ["Russian language"]  # Always include Russian language
         locations = response.choices[0].message.parsed.locations
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
         country_code_map = {
