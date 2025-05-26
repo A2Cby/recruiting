@@ -188,7 +188,8 @@ def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location
     # Placeholder for LinkedIn API call
     logger.info(f"Fetching candidates from LinkedIn with keywords: {keywords} and location: {location}")
     url = f"http://93.127.132.57:8911/querystring"
-
+    if "Russian language" not in keywords:
+        keywords += ["Russian language"]  # Always include Russian language
     headers = {"Content-Type": "application/json"}
     payload = [
         {

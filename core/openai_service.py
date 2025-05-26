@@ -43,7 +43,7 @@ def extract_keywords_from_vacancy(vacancy_text: str):
                 {"role": "system", "content": "You are an expert keyword extractor for the recruitment AI System. "},
                 {"role": "user", "content": f"""
 Extract the most important keywords from the vacancy description to search for candidates on Linkedin.
-Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 10.
+Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 5.
 We are always looking for Russian-speaking candidates, so ALWAYS add "Russian language" to the keywords.
 The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
 
@@ -64,7 +64,7 @@ If no country is mentioned, return an empty list.
             temperature=0.2
         )
         keywords = response.choices[0].message.parsed.keywords
-        keywords += ["Russian language"]  # Always include Russian language
+
         locations = response.choices[0].message.parsed.locations
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
         country_code_map = {
@@ -151,7 +151,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
 - **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
 - **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” without any proof as questionable.  
 - **Concurrent roles**: identify full-time overlaps longer than six months.  
-- **Russian language**: add scores for Russian language skills (eg education or job in russian speaking countries) in the candidate's profile, we usually need it for our clients.
+- **Russian language**: add scores for Russian language skills (eg education or job in russian speaking countries) in the candidate's profile, we always need ONLY Russian speakers for our clients. Reduce the score -5 if the candidate does not have any Russian language skills, never studied or worked in Russian-speaking countries, or does not have any Russian language skills in their profile.
     """
     for candidate in candidates:
         user_content = f"""
