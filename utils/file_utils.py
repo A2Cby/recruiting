@@ -50,7 +50,7 @@ def datetime_serializer(obj):
 def insert_candidates_to_db(vacancy_id: int, data: dict) -> None:             # ➋  NEW
     """
     Store selected candidates in `recruting_selected_candidates`.
-    The whole payload is saved as a JSON string (VARCHAR(50000)).
+    The whole payload is saved as a JSON string
     """
     conn_tunnel = get_db_connection()
     if not conn_tunnel:
@@ -74,7 +74,7 @@ def insert_candidates_to_db(vacancy_id: int, data: dict) -> None:             # 
                         ensure_ascii=False,
                         default=datetime_serializer
 
-                    )[:50000],  # fits VARCHAR(50000)
+                    ),
                 ),
             )
         logger.info(
