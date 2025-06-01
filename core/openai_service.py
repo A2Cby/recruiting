@@ -14,7 +14,7 @@ from openai import APIError, RateLimitError, NotFoundError # Import specific err
 from sshtunnel import SSHTunnelForwarder
 from openai.lib._parsing._completions import type_to_response_format_param
 from core.config import settings
-from schemas.candidate import CandidateData, CandidateScore
+from schemas.candidate import CandidateData, CandidateScore, CandidateEval
 from schemas.openai import KeywordResponse
 from utils.file_utils import save_results_to_file
 from dotenv import load_dotenv
@@ -170,7 +170,7 @@ STRICT RULE: score the candidate as 0 if the candidate does not have any Russian
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                "response_format": type_to_response_format_param(CandidateScore),
+                "response_format": type_to_response_format_param(CandidateEval),
                 "temperature": 0.2
             }
         })

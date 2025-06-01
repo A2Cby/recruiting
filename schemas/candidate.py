@@ -10,11 +10,19 @@ class CandidateData(BaseModel):
     profileURL: Optional[str] = None # Added profileURL
     fullName: Optional[str] = None # Add fullName here too
 
+
+class CandidateEval(BaseModel):
+    candidate_id: int
+    score: float
+    is_russian_speaker: bool
+    reasoning: str
+
+
 class CandidateScore(BaseModel):
     candidate_id: int
     score: float
     is_russian_speaker: bool
-    reasoning: Optional[str] = None
+    reasoning: str
     profileURL: Optional[str] = None
     fullName: Optional[str] = None
     # Additional fields from database that will be populated dynamically
