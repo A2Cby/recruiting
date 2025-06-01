@@ -13,6 +13,7 @@ class CandidateData(BaseModel):
 class CandidateScore(BaseModel):
     candidate_id: int
     score: float
+    is_russian_speaker: bool
     reasoning: Optional[str] = None
     profileURL: Optional[str] = None
     fullName: Optional[str] = None

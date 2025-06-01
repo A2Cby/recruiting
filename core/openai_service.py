@@ -12,10 +12,8 @@ from psycopg2.extras import RealDictCursor
 from openai import OpenAI, AsyncOpenAI
 from openai import APIError, RateLimitError, NotFoundError # Import specific errors
 from sshtunnel import SSHTunnelForwarder
-
+from openai.lib._parsing._completions import type_to_response_format_param
 from core.config import settings
-# Import fetch_candidate_details from db service
-# from core.db import fetch_candidate_details
 from schemas.candidate import CandidateData, CandidateScore
 from schemas.openai import KeywordResponse
 from utils.file_utils import save_results_to_file
@@ -43,7 +41,7 @@ def extract_keywords_from_vacancy(vacancy_text: str):
                 {"role": "system", "content": "You are an expert keyword extractor for the recruitment AI System. "},
                 {"role": "user", "content": f"""
 Extract the most important keywords from the vacancy description to search for candidates on Linkedin.
-Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 5.
+Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 10 and start with possible job titles.
 We are always looking for Russian-speaking candidates, so ALWAYS add "Russian language" to the keywords.
 The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
 
@@ -151,7 +149,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
 - **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
 - **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” without any proof as questionable.  
 - **Concurrent roles**: identify full-time overlaps longer than six months.  
-- **Russian language**: add scores for Russian language skills (eg education or job in russian speaking countries) in the candidate's profile, we always need ONLY Russian speakers for our clients. Reduce the score to overall 0 if the candidate does not have any Russian language skills, never studied or worked in Russian-speaking countries, or does not have any Russian language skills in their profile.
+STRICT RULE: score the candidate as 0 if the candidate does not have any Russian language skills, never studied or worked in Russian-speaking countries, or does not have any Russian language skills in their profile. It is a strict requirement for all candidates and very important for the well-being of many people!
     """
     for candidate in candidates:
         user_content = f"""
@@ -172,8 +170,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                "response_format": {"type": "json_object"},
-                "max_tokens": 500,
+                "response_format": type_to_response_format_param(CandidateScore),
                 "temperature": 0.2
             }
         })
@@ -375,7 +372,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
                     # Create the basic CandidateScore object (will be enhanced with DB data later)
                     final_scores.append(CandidateScore(
                         candidate_id=candidate_id,
-                        score=score_data.get("score", 0.0),
+                        score=score_data.get("score", 0.0) if score_data.get("is_russian_speaker", True) else 0.0,
                         reasoning=score_data.get("reasoning"),
                         profileURL=profile_url,
                         fullName=full_name
