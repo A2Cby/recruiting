@@ -21,7 +21,6 @@ class CandidateEval(BaseModel):
 class CandidateScore(BaseModel):
     candidate_id: int
     score: float
-    is_russian_speaker: bool
     reasoning: str
     profileURL: Optional[str] = None
     fullName: Optional[str] = None
