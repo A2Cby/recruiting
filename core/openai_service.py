@@ -40,8 +40,8 @@ def extract_keywords_from_vacancy(vacancy_text: str):
             messages=[
                 {"role": "system", "content": "You are an expert keyword extractor for the recruitment AI System. "},
                 {"role": "user", "content": f"""
-Extract the most important keywords from the vacancy description to search for candidates on Linkedin.
-Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 10 and start with possible job titles.
+Extract the most important keywords from the vacancy description to search for candidates on Linkedin - think how to formulate the search query to be as wide as possible.
+Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 5 and start with possible job titles.
 We are always looking for Russian-speaking candidates, so ALWAYS add "Russian language" to the keywords.
 The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
 
