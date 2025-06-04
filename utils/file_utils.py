@@ -15,31 +15,22 @@ logger = logging.getLogger(__name__)
 import requests
 def send_candidates_to_api(final_output):
     candidates = final_output["candidates"]
-    for i in range(0, len(candidates), 5):
-        res_auth = requests.post(
-            'https://gate.hrbase.info/auth/login',
-            data={"email": os.getenv("EMAIL"), "password": os.getenv("PASSWORD")},
-        )
-        logger.info("Successfully logged in to HRBase API.")
-        tkn = res_auth.content[16:-2].decode("utf-8")
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {tkn}"
-        }
-        payload = {"candidates": candidates[i:i + 5]}
-        response = requests.post(
-            "https://gate.hrbase.info/imported-candidates/bulk-create",
-            headers=headers,
-            json=payload
-        )
-        try:
-            response.raise_for_status()
-            logger.info("Sent %s candidates OK", len(payload["candidates"]))
-            import time
-            time.sleep(30)
-        except requests.HTTPError as exc:
-            logger.error("Chunk %s-%s failed (%s): %s",
-                         i, i + 5, response.status_code, response.text)
+    res_auth = requests.post(
+        'https://gate.hrbase.info/auth/login',
+        data={"email": os.getenv("EMAIL"), "password": os.getenv("PASSWORD")},
+    )
+    logger.info("Successfully logged in to HRBase API.")
+    tkn = res_auth.content[16:-2].decode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {tkn}"
+    }
+    payload = {"candidates": candidates}
+    response = requests.post(
+        "https://gate.hrbase.info/imported-candidates/bulk-create",
+        headers=headers,
+        json=payload
+    )
     logger.info(f"Candidates sent to the api")
 def datetime_serializer(obj):
     """Custom JSON serializer for objects not serializable by default json code"""
