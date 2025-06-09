@@ -45,7 +45,7 @@ def get_db_connection():
         logger.error(f"SSH tunnel or database connection failed: {e}")
         return None
 
-def fetch_candidates_from_db(keywords: Optional[List[str]] = None):
+def fetch_candidates_from_db(keywords: Optional[List[str]] = None, location: Optional[str] = None,):
     """Fetches and formats candidate data, optionally filtering by keywords in skills or summary."""
     base_query = """
 WITH edu AS (
@@ -116,6 +116,11 @@ LEFT JOIN pos ON p.username = pos.username
         if keyword_conditions:
             where_clauses.append(f"({' OR '.join(keyword_conditions)})")
 
+    if location:
+        logger.info(f"Filtering candidates by location: {location}")
+        # Add location condition to WHERE clause
+        where_clauses.append(f"(p.location ILIKE %s OR p.country ILIKE %s OR p.city ILIKE %s)")
+        params.append(f"%{location}%") # Add %s for ILIKE pattern matching
     # Construct final query
     final_query = base_query
     if where_clauses:
