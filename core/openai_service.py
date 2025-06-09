@@ -14,6 +14,7 @@ from openai import APIError, RateLimitError, NotFoundError # Import specific err
 from sshtunnel import SSHTunnelForwarder
 from openai.lib._parsing._completions import type_to_response_format_param
 from core.config import settings
+from core.config import country_code_map
 from schemas.candidate import CandidateData, CandidateScore, CandidateEval
 from schemas.openai import KeywordResponse
 from utils.file_utils import save_results_to_file
@@ -66,7 +67,6 @@ If no country is mentioned, return an empty list.
         locations = response.choices[0].message.parsed.locations
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
 
-        from config import country_code_map
         locations = [country_code_map.get(location, "") for location in locations]
         return keywords, locations
     except Exception as e:

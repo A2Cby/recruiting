@@ -6,7 +6,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
 from sshtunnel import SSHTunnelForwarder
-
+from core.config import country_code_map
 from schemas.candidate import CandidateData
 import dotenv
 dotenv.load_dotenv()
@@ -115,7 +115,6 @@ LEFT JOIN pos ON p.username = pos.username
         # Combine keyword conditions with OR
         if keyword_conditions:
             where_clauses.append(f"({' OR '.join(keyword_conditions)})")
-    from config import country_code_map
     # change value and key
     inverted_country_code_map = {value: key for key, value in country_code_map.items()}
 
