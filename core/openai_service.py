@@ -141,7 +141,8 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     ---
     
     Pay special attention to:
-
+- **Competitive qualities**: check if their skills and experience match the vacancy. Penalise underqualified and overqualified candidates (-3 score).
+- **Language**: check if their language skills are sufficient for the vacancy.  
 - **Residency clues**: check if their listed employers or schools match the location field.  
 - **Remote flexibility**: a different city for a remote role is fine—don’t penalize it.  
 - **Education details**: verify the names of universities or institutions;  
