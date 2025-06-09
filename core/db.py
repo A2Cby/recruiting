@@ -45,7 +45,7 @@ def get_db_connection():
         logger.error(f"SSH tunnel or database connection failed: {e}")
         return None
 
-def fetch_candidates_from_db(keywords: Optional[List[str]] = None, location: Optional[str] = None,):
+def fetch_candidates_from_db(keywords: Optional[List[str]] = None, locations: Optional[List[str]] = None,):
     """Fetches and formats candidate data, optionally filtering by keywords in skills or summary."""
     base_query = """
 WITH edu AS (
@@ -115,14 +115,19 @@ LEFT JOIN pos ON p.username = pos.username
         # Combine keyword conditions with OR
         if keyword_conditions:
             where_clauses.append(f"({' OR '.join(keyword_conditions)})")
+    from config import country_code_map
+    # change value and key
+    inverted_country_code_map = {value: key for key, value in country_code_map.items()}
 
-    if location:
-        logger.info(f"Filtering candidates by location: {location}")
-        # Add location condition to WHERE clause
-        where_clauses.append(f"(p.location ILIKE %s OR p.country ILIKE %s OR p.city ILIKE %s)")
-        params.append(f"%{location}%")
-        params.append(f"%{location}%")
-        params.append(f"%{location}%")
+    if locations:
+        # get location normal name from geocode
+        location_conditions = []
+        for location in locations:
+            location = inverted_country_code_map[location] if location in inverted_country_code_map else location
+            logger.info(f"Filtering candidates by location: {location}")
+            location_conditions.append("(p.location ILIKE %s OR p.country ILIKE %s OR p.city ILIKE %s)")
+            params.extend([f"%{location}%"] * 3)
+        where_clauses.append("(" + " OR ".join(location_conditions) + ")")
     # Construct final query
     final_query = base_query
     if where_clauses:

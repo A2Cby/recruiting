@@ -65,60 +65,9 @@ If no country is mentioned, return an empty list.
 
         locations = response.choices[0].message.parsed.locations
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
-        country_code_map = {
-            "FRANCE": "105015875",
-            "BELGIUM": "100565514",
-            "SPAIN": "105646813",
-            "ENGLAND": "102299470",
-            "GERMANY": "101282230",
-            "ITALY": "103350119",
-            "UNITED STATES": "103644278",
-            "CANADA": "101174742",
-            "AUSTRALIA": "101452733",
-            "INDIA": "102713980",
-            "CHINA": "102890883",
-            "JAPAN": "101355337",
-            "BRAZIL": "106057199",
-            "POLAND": "105072130",
-            "NETHERLANDS": "102890719",
-            "UKRAINE": "102264497",
-            "SWITZERLAND": "106693272",
-            "SWEDEN": "105117694",
-            "ALBANIA": "102845717",
-            "RUSSIA": "101728296",
-            "UNITED ARAB EMIRATES": "104305776",
-            "ANDORRA": "106296266",
-            "AUSTRIA": "103883259",
-            "BELARUS": "101705918",
-            "BULGARIA": "105333783",
-            "CROATIA": "104688944",
-            "CZECH REPUBLIC": "104508036",
-            "DENMARK": "104514075",
-            "ESTONIA": "102974008",
-            "FINLAND": "100456013",
-            "GEORGIA": "106315325",
-            "GREECE": "104677530",
-            "HUNGARY": "100288700",
-            "TURKEY": "106732692",
-            "ROMANIA": "106670623",
-            "PORTUGAL": "100364837",
-            "NORWAY": "103819153",
-            "MOLDOVA": "106178099",
-            "LITHUANIA": "101464403",
-            "LUXEMBOURG": "104042105",
-            "SERBIA": "101855366",
-            "SLOVAKIA": "103119917",
-            "BOSNIA AND HERZEGOVINA": "102869081",
-            "LATVIA": "104341318",
-            "LIECHTENSTEIN": "100878084",
-            "ISRAEL": "101620260",
-            "KAZAKHSTAN": "106049128",
-            "AZERBAIJAN": "103226548",
-            "UZBEKISTAN": "107734735",
-            "TAJIKISTAN": "105925962",
-        }
 
-        locations = str([country_code_map.get(location, "") for location in locations]).replace("'", "").replace("[", "").replace("]", "")
+        from config import country_code_map
+        locations = [country_code_map.get(location, "") for location in locations]
         return keywords, locations
     except Exception as e:
         logger.error(f"Error during keyword extraction: {e}")
