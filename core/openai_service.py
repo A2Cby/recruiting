@@ -363,8 +363,9 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
                     candidate_id = int(custom_id.replace("candidate_", ""))
                     processed_candidate_ids.append(candidate_id)
                     score_data = json.loads(response_json_str)
-                    score = score_data.get("score", 0.0) if score_data.get("is_russian_speaker", True) else 0.0,
-                    if score >= 7:
+                    if not score_data.get("is_russian_speaker", True):
+                        score_data["score"] = 0.0
+                    if score_data.get("score", 0.0) >= 7:
                         # Get details from the initial data map
                         initial_detail = candidate_details_map.get(candidate_id)
                         profile_url = initial_detail.profileURL if initial_detail else None
@@ -373,7 +374,7 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
                         # Create the basic CandidateScore object (will be enhanced with DB data later)
                         final_scores.append(CandidateScore(
                             candidate_id=candidate_id,
-                            score=score,
+                            score=score_data.get("score"),
                             reasoning=score_data.get("reasoning"),
                             profileURL=profile_url,
                             fullName=full_name
