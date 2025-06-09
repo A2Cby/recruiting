@@ -120,7 +120,9 @@ LEFT JOIN pos ON p.username = pos.username
         logger.info(f"Filtering candidates by location: {location}")
         # Add location condition to WHERE clause
         where_clauses.append(f"(p.location ILIKE %s OR p.country ILIKE %s OR p.city ILIKE %s)")
-        params.append(f"%{location}%", f"%{location}%", f"%{location}%")
+        params.append(f"%{location}%")
+        params.append(f"%{location}%")
+        params.append(f"%{location}%")
     # Construct final query
     final_query = base_query
     if where_clauses:
