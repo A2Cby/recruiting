@@ -17,12 +17,17 @@ async def process_single_vacancy(client, conn, vacancy_row):
     vacancy_description = vacancy_row['description']
     vacancy_location = vacancy_row['location']
     vacancy_skills = vacancy_row['skills']
+    vacancy_experience = vacancy_row['experience']
     with conn.cursor() as cur_update:  # Use a new cursor for thread safety
         query_update = "UPDATE vacancies_vec SET need_to_be_processed = FALSE WHERE id = %s;"
         cur_update.execute(query_update, (vacancy_id,))
         conn.commit()
     # Construct vacancy_text as expected by VacancyMatchRequest
-    vacancy_text = f"{vacancy_title}\n{vacancy_description}\n ONLY FROM Location:{vacancy_location}\n Skillset: {vacancy_skills}"
+    vacancy_text = (f"Vacancy title:{vacancy_title}\n"
+                    f"{vacancy_description}\n "
+                    f"ONLY FROM Location:{vacancy_location}\n "
+                    f"Skillset: {vacancy_skills}"
+                    f"With following years of experience: {vacancy_experience}\n ")
 
     # Prepare payload for the API
     payload = {
