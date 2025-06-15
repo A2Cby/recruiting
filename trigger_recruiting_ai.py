@@ -15,7 +15,7 @@ async def process_single_vacancy(client, conn, vacancy_row):
     vacancy_id = vacancy_row['id']
     vacancy_title = vacancy_row['title']
     vacancy_description = vacancy_row['description']
-    vacancy_location = vacancy_row['location']
+    vacancy_location = vacancy_row['location'] if vacancy_row['location']!="" else "everywhere"
     vacancy_skills = vacancy_row['skills']
     vacancy_experience = vacancy_row['experience']
     with conn.cursor() as cur_update:  # Use a new cursor for thread safety
@@ -23,11 +23,11 @@ async def process_single_vacancy(client, conn, vacancy_row):
         cur_update.execute(query_update, (vacancy_id,))
         conn.commit()
     # Construct vacancy_text as expected by VacancyMatchRequest
-    vacancy_text = (f"Vacancy title:{vacancy_title}\n"
-                    f"{vacancy_description}\n "
-                    f"ONLY FROM Location:{vacancy_location}\n "
+    vacancy_text = (f"Vacancy title: {vacancy_title}\n"
+                    f"Vacancy Description: {vacancy_description}\n "
+                    f"From: {vacancy_location}\n "
                     f"Skillset: {vacancy_skills}"
-                    f"With following years of experience: {vacancy_experience}\n ")
+                    f"With {vacancy_experience} years of experience\n ")
 
     # Prepare payload for the API
     payload = {
@@ -73,59 +73,42 @@ async def process_new_vacancies_and_call_api():
     try:
         with SSHTunnelForwarder(**ssh_tunnel_params) as tunnel:
             print(f"SSH Tunnel established to {os.getenv("SSH_HOST")} on local port {tunnel.local_bind_port}")
+            conn = psycopg2.connect(
+                dbname=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                host=tunnel.local_bind_host,
+                port=tunnel.local_bind_port
+            )
+            # conn.autocommit = False
+            print("Database connection successful via SSH tunnel.")
 
-            conn = None
-            try:
-                conn = psycopg2.connect(
-                    dbname=os.getenv("DB_NAME"),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD"),
-                    host=tunnel.local_bind_host,
-                    port=tunnel.local_bind_port
-                )
-                # conn.autocommit = False
-                print("Database connection successful via SSH tunnel.")
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                    cur.execute("""
+                                SELECT id, title, description, location, skills, places, kinds
+                                FROM vacancies_vec
+                                WHERE need_to_be_processed = TRUE LIMIT 1;
+                                """)
+                    vacancy = cur.fetchone()
 
-                async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-                    with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                        query_select = """
-                                       SELECT id, title, description, location, skills, places, kinds
-                                       FROM vacancies_vec
-                                       WHERE need_to_be_processed = TRUE
-                                       Limit 1;
-                                       """
-                        cur.execute(query_select)
-                        vacancies_to_process = cur.fetchall()
+                    if not vacancy:
+                        print("No new vacancy to process.")
+                        return
 
-                        if not vacancies_to_process:
-                            print("No new vacancies to process.")
-                            return
+                    # process that single vacancy
+                    success, vid, err = await process_single_vacancy(client, conn, vacancy)
+                    if success:
+                        print(f"Vacancy {vid} processed successfully.")
+                    else:
+                        print(f"Vacancy {vid} failed: {err}")
 
-                        print(f"Found {len(vacancies_to_process)} vacancies to process.")
+            conn.close()
+            print("DB connection closed.")
 
-                        tasks = []
-                        for vacancy_row in vacancies_to_process:
-                            # Pass the connection object to each task
-                            tasks.append(process_single_vacancy(client, conn, vacancy_row))
+    except Exception as e:
+        print(f"Error: {e}")
 
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        print(f"Vacancies are sent to AI")
-
-            except psycopg2.Error as db_err:
-                print(f"Database error: {db_err}")
-                if conn:
-                    conn.rollback()
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
-                if conn:
-                    conn.rollback()
-            finally:
-                if conn:
-                    conn.close()
-                    print("Database connection closed.")
-        print("SSH Tunnel closed.")
-    except Exception as tunnel_err:
-        print(f"SSH Tunnel setup or main processing error: {tunnel_err}")
 
 
 if __name__ == "__main__":

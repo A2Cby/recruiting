@@ -80,7 +80,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     system_prompt = f"""
     You are an expert HR assistant. You will be given a vacancy description and a candidate's profile.
     Evaluate how well the candidate matches the vacancy.
-    Provide a score between 0 and 10, where 10 is a perfect match.
+    Provide a score between 0 and 10, where 10 is a perfect match. Average good fit candidates get a score of 5–7, and poor candidates get a score of 0–3.
     Also provide a brief reasoning for your score.
     Respond ONLY in JSON format with keys "score" (float) and "reasoning" (string).
 
@@ -91,11 +91,12 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     
     Pay special attention to:
 - **Competitive qualities**: check if their skills and experience match the vacancy. Penalise underqualified and overqualified candidates (-3 score).
+- **Related job title**: check if their job title matches the vacancy.
+- **Related experience**: check if their skills and experience match the vacancy.
+- **Location**: check if their location matches the vacancy.
 - **Language**: check if their language skills are sufficient for the vacancy.  
 - **Residency clues**: check if their listed employers or schools match the location field.  
-- **Remote flexibility**: a different city for a remote role is fine—don’t penalize it.  
 - **Education details**: verify the names of universities or institutions;  
-- **Online courses**: include entries like Coursera/MITx but label them as “certificate/course.”  
 - **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
 - **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” without any proof as questionable.  
 - **Concurrent roles**: identify full-time overlaps longer than six months.  
