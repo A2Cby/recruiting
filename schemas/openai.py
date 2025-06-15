@@ -5,7 +5,58 @@ class KeywordResponse(BaseModel):
     keywords: List[str]
     locations: List[str] = Field(
         description=(
-            "Leave empty if the vacancy doesn’t name any country or location. Country name shall be written in CAPITAL letters. "
+            """Leave empty if the vacancy doesn’t name any country or location. Country name shall be written in CAPITAL letters. List of available country names:
+    FRANCE
+    BELGIUM
+    SPAIN
+    ENGLAND
+    GERMANY
+    ITALY
+    UNITED STATES
+    CANADA
+    AUSTRALIA
+    INDIA
+    CHINA
+    JAPAN
+    BRAZIL
+    POLAND
+    NETHERLANDS
+    UKRAINE
+    SWITZERLAND
+    SWEDEN
+    ALBANIA
+    RUSSIA
+    UNITED ARAB EMIRATES
+    ANDORRA
+    AUSTRIA
+    BELARUS
+    BULGARIA
+    CROATIA
+    CZECH REPUBLIC
+    DENMARK
+    ESTONIA
+    FINLAND
+    GEORGIA
+    GREECE
+    HUNGARY
+    TURKEY
+    ROMANIA
+    PORTUGAL
+    NORWAY
+    MOLDOVA
+    LITHUANIA
+    LUXEMBOURG
+    SERBIA
+    SLOVAKIA
+    BOSNIA AND HERZEGOVINA
+    LATVIA
+    LIECHTENSTEIN
+    ISRAEL
+    KAZAKHSTAN
+    AZERBAIJAN
+    UZBEKISTAN
+    TAJIKISTAN
+            """
         )
     )
     explanation: str = Field(
