@@ -86,7 +86,7 @@ async def process_new_vacancies_and_call_api():
             async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
                 with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                     cur.execute("""
-                                SELECT id, title, description, location, skills, places, kinds
+                                SELECT id, title, description, location, skills, places, kinds, experience
                                 FROM vacancies_vec
                                 WHERE need_to_be_processed = TRUE LIMIT 1;
                                 """)
