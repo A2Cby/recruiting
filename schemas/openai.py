@@ -59,6 +59,12 @@ class KeywordResponse(BaseModel):
             """
         )
     )
+    russian_speaking: bool = Field(
+        description=(
+            "Return True unless the vacancy explicitly requires non-Russian-speaking candidates."
+        ),
+        default=True,
+    )
     explanation: str = Field(
         description=(
             "Explanation of how the keywords were extracted. "

@@ -25,13 +25,11 @@ async def match_candidates_batch_endpoint(
     """
     if not openai_service.client or not openai_service.sync_client:
         raise HTTPException(status_code=503, detail="OpenAI client (async or sync) not configured.")
-
-    logger.info("Received request to match candidates.")
     logger.info(f"Vacancy: {request}")
     try:
         # 1. Extract Keywords (Sync call)
         logger.info("Extracting keywords from vacancy description...")
-        keywords, location = extract_keywords_from_vacancy(request.vacancy_text)
+        keywords, location, russian_speaking = extract_keywords_from_vacancy(request.vacancy_text)
         if not keywords:
             logger.warning("No keywords extracted or keyword extraction failed. Proceeding without keyword filtering.")
 
@@ -41,7 +39,7 @@ async def match_candidates_batch_endpoint(
 
         # 3. Fetch Candidates
         try:
-            fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location)
+            fetch_candidates_from_linkedin(str(request.vacancy_id), keywords=keywords, location=location, russian_speaking=russian_speaking)
         except Exception as e:
             logger.info(f"No linkedin candidates fetched: {e}")
         candidates: List[CandidateData] = fetch_candidates_from_db(keywords=keywords, locations=location)
