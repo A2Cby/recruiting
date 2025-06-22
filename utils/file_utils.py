@@ -171,14 +171,14 @@ def save_results_to_file(scores: List[CandidateScore],
         return None
 
 
-def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location: List[str]):
+def fetch_candidates_from_linkedin(vacancy_id:str, keywords: List[str], location: List[str], russian_speaking: bool = True):
     """
     Fetch candidates from LinkedIn using the provided keywords and location.
     This is a placeholder function and should be replaced with actual LinkedIn API calls.
     """
     # Placeholder for LinkedIn API call
     logger.info(f"Fetching candidates from LinkedIn with keywords: {keywords} and location: {location}")
-    url = f"http://93.127.132.57:8911/querystring"
+    url = f"http://93.127.132.57:8911/get_ru_candidates" if russian_speaking else "http://93.127.132.57:8911/get_international_candidate"
     headers = {"Content-Type": "application/json"}
     payload = [
         {
