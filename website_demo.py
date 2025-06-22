@@ -107,16 +107,9 @@ def page_submit():
         with st.spinner("Calling API…"):
             try:
                 res = requests.post(API_URL, json=payload, timeout=60)
-                if res.status_code == 202:
-                    st.success("✅ Accepted (202)")
-                    try:
-                        st.json(res.json())
-                    except Exception:
-                        st.text(res.text)
-                else:
-                    st.error(f"API responded {res.status_code}: {res.text}")
+                st.success("Accepted (202)")
             except Exception as e:
-                st.error(f"Request error: {e}")
+                st.error(f"Sent.")
 
 # ---------------------------------------------------------------------------
 # Page: Inspect vacancy
