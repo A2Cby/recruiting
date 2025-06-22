@@ -10,7 +10,7 @@ COPY .env .
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-EXPOSE 8910   # FastAPI
-EXPOSE 8501   # Streamlit
+EXPOSE 8910
+EXPOSE 8501
 
 CMD ["/start.sh"]
