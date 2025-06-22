@@ -11,6 +11,6 @@ COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 8910
-EXPOSE 8501
+EXPOSE 8912
 
 CMD ["/start.sh"]
