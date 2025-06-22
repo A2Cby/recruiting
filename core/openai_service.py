@@ -91,7 +91,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     ---
     
     Pay special attention to:
-- **Competitive qualities**: check if their skills and experience match the vacancy. Penalise underqualified and overqualified candidates (-3 score).
+- **Competitive qualities**: check if their skills and experience match the vacancy. Penalise underqualified and overqualified candidates (-3 score). Treat tech manager experience for technical-only position as overqualified (-3 score).
 - **Related job title**: check if their job title matches the vacancy. Try to match the job title to the vacancy's title. 
 - **Related experience**: check if their skills and experience match the vacancy. Penalise overqualified candidates (-3 score) even if there is no explicit number of experience years listed in the vacancy, assume the seniority of the vacancy.
 - **Location**: check if their location matches the vacancy.
@@ -99,8 +99,7 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
 - **Residency clues**: check if their listed employers or schools match the location field.  
 - **Education details**: verify the names of universities or institutions;  
 - **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
-- **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” as overqualified 
-- **Concurrent roles**: identify full-time overlaps longer than six months.  
+- **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” as overqualified;
 STRICT RULE: score the candidate as 0 if the candidate does not have any Russian language skills, never studied or worked in Russian-speaking countries, or does not have any Russian language skills in their profile. It is a strict requirement for all candidates and very important for the well-being of many people!
     """
     for candidate in candidates:
