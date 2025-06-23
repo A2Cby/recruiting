@@ -86,7 +86,7 @@ def page_submit():
         with col1:
             vacancy_id = st.number_input("Vacancy ID", step=1, min_value=1)
             location = st.text_input("Location", value="everywhere")
-            experience = st.number_input("Experience (years)", min_value=0, step=1)
+            experience = st.text_input("Experience (years)", value="2-4")
         with col2:
             title = st.text_input("Title")
             skills = st.text_input("Skills (comma‑separated)")
