@@ -6,7 +6,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
 from sshtunnel import SSHTunnelForwarder
-from core.config import country_code_map
 from schemas.candidate import CandidateData
 import dotenv
 dotenv.load_dotenv()
@@ -116,7 +115,8 @@ LEFT JOIN pos ON p.username = pos.username
         if keyword_conditions:
             where_clauses.append(f"({' OR '.join(keyword_conditions)})")
     # change value and key
-    inverted_country_code_map = {value: key for key, value in country_code_map.items()}
+    from schemas.openai import Country
+    inverted_country_code_map = {member.value: name for name, member in Country.__members__.items()}
 
     if locations:
         # get location normal name from geocode
