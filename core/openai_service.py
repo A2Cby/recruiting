@@ -97,29 +97,40 @@ def prepare_openai_batch_input(vacancy_text: str, candidates: List[CandidateData
     """Formats data for the OpenAI Batch API using the Nano model."""
     batch_input = []
     system_prompt = f"""
-    You are an expert HR assistant. You will be given a vacancy description and a candidate's profile.
-    Evaluate how well the candidate matches the vacancy.
-    Provide a score between 0 and 10, where 10 is a perfect match. Average good fit candidates get a score of 5–7, and poor candidates get a score of 0–3.
-    Also provide a brief reasoning for your score.
-    Respond ONLY in JSON format with keys "score" (float) and "reasoning" (string).
+You are an HR‑match scorer. Given a vacancy and a candidate profile, return:
 
-    Vacancy Description:
-    ---
-    {vacancy_text}
-    ---
-    
-    Pay special attention to:
-- **Competitive qualities**: check if their skills and experience match the vacancy. Penalise underqualified and overqualified candidates (-3 score). Treat tech manager experience for technical-only position as overqualified (-3 score).
-- **Related job title**: check if their job title matches the vacancy. Try to match the job title to the vacancy's title. 
-- **Related experience**: check if their skills and experience match the vacancy. Penalise overqualified candidates (-3 score) even if there is no explicit number of experience years listed in the vacancy, assume the seniority of the vacancy.
-- **Location**: check if their location matches the vacancy.
-- **Language**: check if their language skills are sufficient for the vacancy.  
-- **Residency clues**: check if their listed employers or schools match the location field.  
-- **Education details**: verify the names of universities or institutions;  
-- **Timeline consistency**: flag unusually short stints or overlapping dates in their work history.  
-- **Self-employment vs. Founder**: treat “self-employed” as valid if they list concrete projects; treat “Founder” as overqualified;
-STRICT RULE: score the candidate as 0 if the candidate does not have any Russian language skills, never studied or worked in Russian-speaking countries, or does not have any Russian language skills in their profile. It is a strict requirement for all candidates and very important for the well-being of many people!
-    """
+1. score – float 0‑10  
+2. reason – one short paragraph
+
+**Score bands**  
+7‑10 → perfect fit / hire  
+5‑6  → almost fit / interview  
+0‑4  → poor / reject
+
+**How to score** – start at=10 and subtract penalties  
+(If any single penalty ≥2, cap final score at<6.)
+
+| Criterion | Penalty | Examples (vacancy → candidate) |
+|-----------|---------|--------------------------------|
+| Job title | −7 mismatch; −2 close synonym | “Data Scientist”→“Data Engineer”; “Motion Designer”→“Graphic Designer” |
+| Core skills | −2 each missing core; −3 over/underqualified (>2yr range) | Needs Python+AWS→lacks AWS; Needs 3‑5yr→15yr (over) |
+| Manager vs IC | −3 mgr for IC | “Engineering Manager” for “Senior Dev”; “CTO” for “Backend Dev” |
+| Location | −5 wrong onsite; −2 remote‑timezone ok | Berlin onsite→Munich; EU remote ok→UTC‑8 |
+| Language | −5 missing req.; **score=0** if no Russian and vacancy silent | Needs DE+EN→EN only; Needs RU→no RU |
+| Residency clues | −1 employers/uni in wrong region | Vacancy Paris→jobs in Moscow; Vacancy Tokyo→school in US |
+| Education fit | −1 unknown/irrelevant if degree critical | Needs CS degree→“Business Mgmt”; Needs top uni→unknown college |
+| Employment type | “Founder” −3; “Self‑employed” ok if projects listed | Founder SaaS→−3; Freelance w/ projects→0 |
+
+**Notes**  
+- Do NOT give ≥7 if any penalty ≥2 was applied.  
+- Default: Russian required unless vacancy states otherwise.
+
+Vacancy:
+---
+{vacancy_text}
+---
+"""
+
     for candidate in candidates:
         user_content = f"""
         Candidate Profile (ID: {candidate.id}):
@@ -140,7 +151,7 @@ STRICT RULE: score the candidate as 0 if the candidate does not have any Russian
                     {"role": "user", "content": user_content}
                 ],
                 "response_format": type_to_response_format_param(CandidateEval),
-                "temperature": 0.2
+                "temperature": 0
             }
         })
     return batch_input
@@ -332,8 +343,6 @@ def process_openai_results(results_content: str, initial_candidates: List[Candid
                     candidate_id = int(custom_id.replace("candidate_", ""))
                     processed_candidate_ids.append(candidate_id)
                     score_data = json.loads(response_json_str)
-                    if not score_data.get("is_russian_speaker", True):
-                        score_data["score"] = 0.0
                     if score_data.get("score", 0.0) >= 7:
                         # Get details from the initial data map
                         initial_detail = candidate_details_map.get(candidate_id)

@@ -25,7 +25,7 @@ async def process_single_vacancy(client, conn, vacancy_row):
     # Construct vacancy_text as expected by VacancyMatchRequest
     vacancy_text = (f"Vacancy title: {vacancy_title}\n"
                     f"Vacancy Description: {vacancy_description}\n "
-                    f"From: {vacancy_location}\n "
+                    f"Location: {vacancy_location}\n "
                     f"Skillset: {vacancy_skills}"
                     f"With {vacancy_experience} years of experience\n ")
 
