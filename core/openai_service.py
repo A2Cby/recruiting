@@ -113,6 +113,7 @@ You are an HR‑match scorer. Given a vacancy and a candidate profile, return:
 | Criterion | Penalty | Examples (vacancy → candidate) |
 |-----------|---------|--------------------------------|
 | Job title | −7 mismatch; −2 close synonym | “Data Scientist”→“Data Engineer”; “Motion Designer”→“Graphic Designer” |
+| Domain | −3 different domain; −1 tangential | Mobile‑gaming role→FinTech candidate (−3); SaaS→Cloud hosting (−1) |
 | Core skills | −2 each missing core; −3 over/underqualified (>2yr range) | Needs Python+AWS→lacks AWS; Needs 3‑5yr→15yr (over) |
 | Manager vs IC | −3 mgr for IC | “Engineering Manager” for “Senior Dev”; “CTO” for “Backend Dev” |
 | Location | −5 wrong onsite; −2 remote‑timezone ok | Berlin onsite→Munich; EU remote ok→UTC‑8 |
