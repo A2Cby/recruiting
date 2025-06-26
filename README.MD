@@ -30,7 +30,7 @@ docker load -i recruiting-api.tar
 
 setup .env file
 
-docker run -d --env-file .env -p 8910:8910 8912:8912 --restart unless-stopped --name recruiting-api --network recruiting-net recruiting-api
+docker run -d --env-file .env -p 8910:8910 -p 8912:8912 --restart unless-stopped --name recruiting-api --network recruiting-net recruiting-api
 
 
 Pay attention to the ports!

@@ -31,6 +31,7 @@ if not settings.openai_api_key:
     logger.error("OPENAI_API_KEY environment variable not set or empty in .env file.")
 
 country_code_map = {
+    "CYPRUS": "106774002",
     "FRANCE": "105015875",
     "BELGIUM": "100565514",
     "SPAIN": "105646813",
