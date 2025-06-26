@@ -60,6 +60,7 @@ class KeywordResponse(BaseModel):
     locations: List[Country] = Field(
         description=(
             """Leave empty if the vacancy doesn’t name any country or location. Country name shall be written in CAPITAL letters. List of available country names:
+    CYPRUS
     FRANCE
     BELGIUM
     SPAIN
