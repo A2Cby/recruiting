@@ -39,32 +39,50 @@ def extract_keywords_from_vacancy(vacancy_text: str):
         response = sync_client.beta.chat.completions.parse(
             model=os.getenv("OPENAI_MODEL"),
             messages=[
-                {"role": "system", "content": "You are an expert keyword extractor for the recruitment AI System. "},
+                {"role": "system", "content": """
+You are an expert keyword extractor for a recruitment AI system.
+
+**Instructions:**
+
+* Extract up to 5 of the most important keywords from the vacancy description for LinkedIn search, focusing on:
+
+  1. Job title
+  2. Domain
+  3. Core skills
+* Also extract a list of countries mentioned in the vacancy as **search locations**.
+
+  * Output each country as the exact `Country` enum value (e.g., UNITED_STATES, GERMANY, FRANCE)
+  * If the vacancy mentions a region (like "EU"), list all corresponding countries from the schema.
+  * If no country is mentioned, return an empty list.
+
+**Special rules:**
+
+* By default, assume candidates must be Russian-speaking unless the vacancy states otherwise.
+* Always map country names to the exact enum value (e.g., Poland → POLAND, Germany → GERMANY).
+* Only output countries that match valid enum values.
+
+**Output as a JSON object with the following fields:**
+
+* `keywords`: list of up to 5 keywords
+* `locations`: list of LocationCode enums (empty if not specified)
+* `russian_speaking`: boolean (true unless vacancy says otherwise)
+* `explanation`: brief reasoning on keyword and location extraction
+
+"""},
                 {"role": "user", "content": f"""
-Extract the most important keywords from the vacancy description to search for candidates on Linkedin - think how to formulate the search query to get the most appropriate candidates possible.
-Focus on terms useful for searching a candidate database, limit the keywords to a maximum of 5 and start with possible job titles.
-We are always looking for Russian-speaking candidates, so ALWAYS add "Russian language" to the keywords.
-The list of keywords should be diverse, cover all aspects of the vacancy, and enrich the search.
-
-Also, provide a list of country codes for candidate search locations. These codes **must** be valid `LocationCode` enum values (e.g., UNITED_STATES, GERMANY, FRANCE are some examples of valid codes; refer to the `LocationCode` schema for all options). If the vacancy does not specify countries, return an empty list. Base your answer on the vacancy description.
-
-When you see a country name in the vacancy you MUST convert it to the exact enum in LocationCode:
-Poland -> POLAND, Germany -> GERMANY
-If the whole region instead of a country is mentioned, list all countries inside of the region. For example, EU -> [FRANCE, BELGIUM, SPAIN, ENGLAND, GERMANY, ITALY, NETHERLANDS, POLAND, SWITZERLAND, SWEDEN, AUSTRIA, BULGARIA, CROATIA, CZECH_REPUBLIC, DENMARK, ESTONIA, FINLAND, GREECE, HUNGARY, ROMANIA, PORTUGAL, NORWAY, LITHUANIA, LUXEMBOURG, SLOVAKIA] and so on.
-If no country is mentioned, return an empty list. 
-                            Vacancy Description:
-                            ---
-                            {vacancy_text}
-                            ---
-            """}
-            ]
-            ,
+Vacancy Description:
+---
+{vacancy_text}
+---
+"""}
+            ],
             response_format=KeywordResponse,
-            temperature=0.2
+            temperature=0
         )
         keywords = response.choices[0].message.parsed.keywords
 
         locations = response.choices[0].message.parsed.locations
+        locations = [location.value for location in locations]
         russian_speaking = response.choices[0].message.parsed.russian_speaking
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
 

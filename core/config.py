@@ -18,25 +18,17 @@ class Settings(BaseSettings):
     db_host: str = os.environ.get("DB_HOST", "127.0.0.1")
     db_port: str = os.environ.get("DB_PORT", "5466")
 
-    # Output Directory
     output_dir: str = os.environ.get("OUTPUT_DIR", "data/")
 
-    # Model configuration for Settings loading
     model_config = SettingsConfigDict(
-        env_file='.env',          # Load .env file
+        env_file='.env',
         env_file_encoding='utf-8',
-        extra='ignore'           # Ignore extra fields from .env
+        extra='ignore'
     )
 
-# Create a single settings instance
 settings = Settings()
-
-# Validate essential settings
 if not settings.openai_api_key:
     logger.error("OPENAI_API_KEY environment variable not set or empty in .env file.")
-    # Depending on your application's needs, you might want to raise an error
-    # or exit here if the API key is absolutely essential for startup.
-    # raise ValueError("OPENAI_API_KEY must be set")
 
 country_code_map = {
     "FRANCE": "105015875",
