@@ -6,7 +6,7 @@ import logging
 import asyncio
 from datetime import datetime
 from typing import List, Dict, Any
-
+from schemas.openai import country_code_map
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from openai import OpenAI, AsyncOpenAI
@@ -84,6 +84,7 @@ Vacancy Description:
         locations = [location.value for location in locations]
         russian_speaking = response.choices[0].message.parsed.russian_speaking
         logger.info(f"Extracted keywords, location: {keywords} : {locations}; explanation: {response.choices[0].message.parsed.explanation}")
+        locations = [country_code_map.get(location,"") for location in locations]
         return keywords, locations, russian_speaking
     except Exception as e:
         logger.error(f"Error during keyword extraction: {e}")
