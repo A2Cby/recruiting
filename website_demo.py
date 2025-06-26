@@ -98,7 +98,7 @@ def page_submit():
         vacancy_text = (
             f"Vacancy title: {title}\n"
             f"Vacancy Description: {description}\n"
-            f"From: {location}\n"
+            f"Location: {location}\n"
             f"Skillset: {skills}\n"
             f"With {experience} years of experience\n"
         )
