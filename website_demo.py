@@ -84,7 +84,7 @@ def page_submit():
     with st.form("vacancy_form", clear_on_submit=False):
         col1, col2 = st.columns(2)
         with col1:
-            vacancy_id = st.number_input("Vacancy ID", step=1, min_value=1)
+            vacancy_id = 0
             location = st.text_input("Location", value="everywhere")
             experience = st.text_input("Experience (years)", value="2-4")
         with col2:
@@ -102,7 +102,7 @@ def page_submit():
             f"Skillset: {skills}\n"
             f"With {experience} years of experience\n"
         )
-        payload = {"vacancy_id": int(vacancy_id), "vacancy_text": vacancy_text}
+        payload = {"vacancy_id": vacancy_id, "vacancy_text": vacancy_text}
 
         with st.spinner("Calling API…"):
             try:
