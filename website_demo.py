@@ -120,7 +120,7 @@ def page_inspect():
 
     col1, col2 = st.columns([2, 1])
     with col1:
-        vacancy_id = st.number_input("vacancy_id", min_value=1, step=1)
+        vacancy_id = st.number_input("vacancy_id", min_value=0, step=1)
     with col2:
         submitted = st.button("🔍 Load")
 
